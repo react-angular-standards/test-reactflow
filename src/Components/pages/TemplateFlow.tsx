@@ -676,15 +676,15 @@ function TemplateFlowInner({
   }, [searchQuery]);
 
   const activeGroup = useMemo(() => {
-    const found = filteredGroups.find((g) => g.title === activeTab);
-    if (found) return found;
-    // "All" tab: merge every item from every group
+    // "All" tab: always merge every item from every real group
     if (activeTab === "All") {
       const allItems = filteredGroups
         .filter((g) => g.title !== "All")
         .flatMap((g) => g.items);
       return { title: "All", color: "#1976d2", items: allItems };
     }
+    const found = filteredGroups.find((g) => g.title === activeTab);
+    if (found) return found;
     return filteredGroups[0];
   }, [filteredGroups, activeTab]);
 
