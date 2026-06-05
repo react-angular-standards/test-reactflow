@@ -650,20 +650,28 @@ function TemplateFlowInner({
     [getNodes, screenToFlowPosition, treeRoot, onInfoClick, setNodes, setEdges],
   );
 
-  /* ---- Filter palette by search ---------------------------------- */
+  /* ---- Tabs + search for palette -------------------------------- */
+  const [activeTab, setActiveTab] = useState<string>(PALETTE_GROUPS[0].title);
+
   const filteredGroups = useMemo(() => {
     const q = searchQuery.toLowerCase().trim();
-    if (!q) return PALETTE_GROUPS;
-    return PALETTE_GROUPS.map((g) => ({
-      ...g,
-      items: g.items.filter(
-        (item) =>
-          item.header.toLowerCase().includes(q) ||
-          item.inputType.toLowerCase().includes(q) ||
-          item.description?.toLowerCase().includes(q),
-      ),
-    })).filter((g) => g.items.length > 0);
+    let groups = PALETTE_GROUPS;
+    if (q) {
+      groups = PALETTE_GROUPS.map((g) => ({
+        ...g,
+        items: g.items.filter(
+          (item) =>
+            item.header.toLowerCase().includes(q) ||
+            item.inputType.toLowerCase().includes(q) ||
+            item.description?.toLowerCase().includes(q),
+        ),
+      })).filter((g) => g.items.length > 0);
+    }
+    return groups;
   }, [searchQuery]);
+
+  const activeGroup =
+    filteredGroups.find((g) => g.title === activeTab) || filteredGroups[0];
 
   return (
     <div>
@@ -715,12 +723,12 @@ function TemplateFlowInner({
           </ReactFlow>
         </div>
 
-        {/* Right panel — grouped + searchable palette */}
+        {/* Right panel — tabbed + searchable palette */}
         <div className={styles.detailPanel}>
           <Label weight="semibold" size="large" style={{ marginBottom: 4 }}>
             Object Palette
           </Label>
-          <Text size={200} style={{ color: "#666", marginBottom: 12 }}>
+          <Text size={200} style={{ color: "#666", marginBottom: 10 }}>
             Drag items into the flow
           </Text>
 
@@ -732,23 +740,53 @@ function TemplateFlowInner({
               contentBefore={
                 <SearchRegular style={{ fontSize: 14, color: "#888" }} />
               }
-              style={{ width: "100%" }}
+              style={{
+                width: "100%",
+                border: "1px solid #ccc",
+                borderRadius: "6px",
+              }}
             />
+          </div>
+
+          {/* Category tabs */}
+          <div
+            style={{
+              display: "flex",
+              gap: 4,
+              marginBottom: 10,
+              borderBottom: "1px solid #e0e0e0",
+              paddingBottom: 6,
+            }}
+          >
+            {filteredGroups.map((group) => (
+              <button
+                key={group.title}
+                onClick={() => setActiveTab(group.title)}
+                style={{
+                  padding: "5px 12px",
+                  borderRadius: "16px",
+                  border: "none",
+                  cursor: "pointer",
+                  fontSize: 12,
+                  fontWeight: 600,
+                  background:
+                    activeTab === group.title ? group.color : "transparent",
+                  color: activeTab === group.title ? "#fff" : group.color,
+                  transition: "all 0.15s",
+                }}
+              >
+                {group.title}
+              </button>
+            ))}
           </div>
 
           {filteredGroups.length === 0 && (
             <div className={styles.noResults}>No matching objects</div>
           )}
 
-          {filteredGroups.map((group) => (
-            <div key={group.title} className={styles.paletteGroup}>
-              <div
-                className={styles.paletteGroupTitle}
-                style={{ borderBottomColor: group.color }}
-              >
-                <span style={{ color: group.color }}>●</span> {group.title}
-              </div>
-              {group.items.map((obj) => (
+          {activeGroup && (
+            <div style={{ overflowY: "auto", flex: 1 }}>
+              {activeGroup.items.map((obj) => (
                 <div
                   key={obj.UniqueID}
                   draggable
@@ -772,7 +810,7 @@ function TemplateFlowInner({
                 </div>
               ))}
             </div>
-          ))}
+          )}
         </div>
       </div>
 

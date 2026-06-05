@@ -95,7 +95,11 @@
               "isDeleted2": false,
               "header": "2.1 Performance",
               "inputType": "select",
-              "choices": ["Level A", "Level B", "Level C"],
+              "choices": [
+                "Level A",
+                "Level B",
+                "Level C"
+              ],
               "hasInput": true,
               "prompt": "Select performance level",
               "order": 1,
@@ -147,7 +151,11 @@
               "isDeleted2": false,
               "header": "2.2 Safety",
               "inputType": "multiselect",
-              "choices": ["DO-178C", "DO-254", "ARP4754"],
+              "choices": [
+                "DO-178C",
+                "DO-254",
+                "ARP4754"
+              ],
               "hasInput": true,
               "prompt": "Select applicable standards",
               "order": 2,
@@ -254,7 +262,12 @@
           "isDeleted2": false,
           "header": "Impact Assessment",
           "inputType": "select",
-          "choices": ["Low", "Medium", "High", "Critical"],
+          "choices": [
+            "Low",
+            "Medium",
+            "High",
+            "Critical"
+          ],
           "hasInput": true,
           "prompt": "Select impact level",
           "order": 2,
