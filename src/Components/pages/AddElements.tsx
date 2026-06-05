@@ -10,7 +10,7 @@
  */
 import React from "react";
 import { useState } from "react";
-import { useParams } from "react-router-dom";
+import { useParams, useHistory } from "react-router-dom";
 import {
   Home20Regular,
   Calendar20Filled,
@@ -86,6 +86,7 @@ import SelectRequirement from "./SelectRequirement";
 import { ExportToCSV_Template } from "./exportToCSV";
 import TemplateFlow from "./TemplateFlow";
 import { HARDCODED_TEMPLATE } from "./hardcodedTemplate";
+import { Types } from "./TemplateTypes";
 const useStyles = makeStyles({
   base: {
     display: "flex",
@@ -127,8 +128,9 @@ const emptyfields = (): IFieldType => ({
 });
 
 export const AddElements = (): JSX.Element => {
-  const { screenname } = useParams<{ screenname: string }>();
   const { id } = useParams<{ id: string }>();
+  const history = useHistory();
+  const isEditMode = !!id;
   const [templateObject, setTemplateObject] = useState<IFieldType>(emptyfields);
   const [templatearray, settemplatearray] = useState<IFieldType[]>([]);
   const [templatearray1, settemplatearray1] = useState<IFieldType[]>([]);
@@ -149,94 +151,68 @@ export const AddElements = (): JSX.Element => {
   const [selectcount, setSelectCount] = useState<number>(0);
   const [inputRef, setInputFocus] = useState<boolean>(false);
   const [tags, setTags] = useState<any>([]);
+  const [flowTree, setFlowTree] = useState<Types>(HARDCODED_TEMPLATE);
+  const [flowValidationMsg, setFlowValidationMsg] = useState<string>("");
+
+  React.useEffect(() => {
+    setFlowValidationMsg(validateFlowTree(flowTree));
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   React.useEffect(() => {
     setLoadwhilerender(true);
-    fetch(UrlConstant.QUERY_TEMPLATE_OBJECT + "Tag", {
-      mode: "cors",
-      credentials: "include",
-    })
-      .then((res) => res.json())
-      .then((result) => {
-        setTags(result);
-      });
-    if (id != undefined) {
-      // fetch(UrlConstant.QUERY_TEMPLATE_BY_ID + id + "/", {
-      //   mode: "cors",
-      //   credentials: "include",
-      // })
-      //   .then((res) => res.json())
-      //   .then((result) => {
-      //     setdataset(result);
-      //   });
 
-      fetch(UrlConstant.QUERY_TEMPLATE_BY_ID + id, {
-        mode: "cors",
-        credentials: "include",
-      })
+    if (id) {
+      // Load from json-server
+      fetch(`${UrlConstant.TEMPLATES}/${id}`)
         .then((res) => res.json())
         .then((result) => {
-          settemplatearray1(result);
-          settemplatearray(result);
-          setTemplateObject(result[0]);
+          setTemplateObject(result);
+          setFlowTree(result);
+          setFlowValidationMsg(validateFlowTree(result));
+          settemplatearray([result]);
+          settemplatearray1([result]);
           setLoadwhilerender(false);
-        });
+        })
+        .catch(() => setLoadwhilerender(false));
     } else {
       setLoadwhilerender(false);
     }
-    let temptemplateObjectlist: any = [];
-    fetch(UrlConstant.QUERY_TEMPLATE_OBJECT + "RequirementObject", {
-      mode: "cors",
-      credentials: "include",
-    })
-      .then((res) => res.json())
-      .then((result) => {
-        temptemplateObjectlist = result;
-
-        fetch(UrlConstant.QUERY_TEMPLATE_OBJECT + "Template", {
-          mode: "cors",
-          credentials: "include",
-        })
-          .then((res) => res.json())
-          .then((result) => {
-            for (let i = 0; i < result.length; i++) {
-              result[i]["type"] = "template";
-              temptemplateObjectlist.push(result[i]);
-            }
-
-            setrequirementObjectList(temptemplateObjectlist);
-          });
-      });
-  }, []);
+  }, [id]);
 
   const save_template = () => {
     setSaveButtonLoading(true);
-    fetch(UrlConstant.MANAGE_SAVE_TEMPLATE + "Template", {
-      method: "post",
+
+    const payload = {
+      ...flowTree,
+      header: templateObject.header,
+      description: templateObject.description,
+      id: isEditMode ? Number(id) : undefined,
+    };
+
+    const url = isEditMode
+      ? `${UrlConstant.TEMPLATES}/${id}`
+      : UrlConstant.TEMPLATES;
+    const method = isEditMode ? "PUT" : "POST";
+
+    fetch(url, {
+      method,
       headers: {
         Accept: "application/json",
         "Content-Type": "application/json",
       },
-      body: JSON.stringify(templateObject),
+      body: JSON.stringify(payload),
     })
       .then((res) => res.json())
-      .then((result) => {
-        // console.log$&
+      .then(() => {
         setDisableSave(true);
         setSaveButtonLoading(false);
-        const temptemplatearray = [];
-        temptemplatearray?.push(result);
-        settemplatearray(temptemplatearray);
-        settemplatearray1(temptemplatearray);
-        setCount1(count1 + 1);
-        setTemplateObject(result);
         setTimeout(() => {
-          setDisableSave(false);
-        }, 3000);
+          history.push("/templates");
+        }, 800);
       })
       .catch((error) => {
         console.error("Error saving template:", error);
-        // Optionally handle errors here, and you may want to re-enable the save button
         setDisableSave(false);
         setSaveButtonLoading(false);
       });
@@ -338,6 +314,38 @@ export const AddElements = (): JSX.Element => {
     setSelectCount(selectcount + 1);
   };
 
+  /* ---- Tree validation ------------------------------------------ */
+  const countTreeNodes = (root: Types): number => {
+    let count = 1;
+    for (const child of root.children || []) {
+      count += countTreeNodes(child);
+    }
+    return count;
+  };
+
+  const countTreeEdges = (root: Types): number => {
+    let edges = root.children?.length || 0;
+    for (const child of root.children || []) {
+      edges += countTreeEdges(child);
+    }
+    return edges;
+  };
+
+  const validateFlowTree = (tree: Types): string => {
+    const nodes = countTreeNodes(tree);
+    const edges = countTreeEdges(tree);
+    if (nodes > 1 && edges !== nodes - 1) {
+      const orphanCount = nodes - 1 - edges;
+      return `${orphanCount} free object${orphanCount > 1 ? "s" : ""} not a child of any parent. Drag onto a parent node to connect.`;
+    }
+    return "";
+  };
+
+  const handleFlowTreeChange = (tree: Types) => {
+    setFlowTree(tree);
+    setFlowValidationMsg(validateFlowTree(tree));
+  };
+
   return (
     <div>
       <Breadcrumb
@@ -350,16 +358,14 @@ export const AddElements = (): JSX.Element => {
         </BreadcrumbItem>
         <BreadcrumbDivider />
         <BreadcrumbItem>
-          <BreadcrumbButton
-            onClick={() => (window.location.href = "#/formbuilder")}
-          >
-            <Fluid16Regular color="black" fontSize={15} /> {screenname}
+          <BreadcrumbButton onClick={() => history.push("/templates")}>
+            <Fluid16Regular color="black" fontSize={15} /> Templates
           </BreadcrumbButton>
         </BreadcrumbItem>
         <BreadcrumbDivider />
         <BreadcrumbItem>
           <BreadcrumbButton icon={<AddCircle20Filled />} current>
-            ADD SOW
+            {isEditMode ? "Edit Template" : "Add Template"}
           </BreadcrumbButton>
         </BreadcrumbItem>
       </Breadcrumb>
@@ -471,7 +477,11 @@ export const AddElements = (): JSX.Element => {
                     className="mt-2"
                     appearance="primary"
                     shape="square"
-                    disabled={templateObject.isDeleted || saveButtonLoading}
+                    disabled={
+                      templateObject.isDeleted ||
+                      saveButtonLoading ||
+                      !!flowValidationMsg
+                    }
                     onClick={save_template}
                   >
                     {saveButtonLoading ? <Spinner size="small" /> : "Save"}
@@ -501,7 +511,18 @@ export const AddElements = (): JSX.Element => {
                       padding: 20,
                     }}
                   >
-                    <TemplateFlow root={HARDCODED_TEMPLATE} />
+                    {flowValidationMsg && (
+                      <MessageBar intent="warning" style={{ marginBottom: 12 }}>
+                        <MessageBarBody>
+                          <MessageBarTitle>Validation Error</MessageBarTitle>
+                          {flowValidationMsg}
+                        </MessageBarBody>
+                      </MessageBar>
+                    )}
+                    <TemplateFlow
+                      root={isEditMode ? flowTree : HARDCODED_TEMPLATE}
+                      onTreeChange={handleFlowTreeChange}
+                    />
 
                     {/* <ReactHierarchy
                       nodes={templatearray}

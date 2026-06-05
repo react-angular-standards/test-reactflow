@@ -5,6 +5,7 @@ import { AddSow } from "./Components/pages/AddSow";
 import { Configuration } from "./Components/pages/Configuration";
 import { RequirementObject } from "./Components/pages/Requirementobject";
 import { AddElements } from "./Components/pages/AddElements";
+import { TemplatesList } from "./Components/pages/TemplatesList";
 
 function App() {
   return (
@@ -26,8 +27,8 @@ function App() {
             <Route exact path="/" component={AddSow} />
             <Route path="/page/:screenname/:id?" component={AddSow} />
             <Route path="/requirements" component={RequirementObject} />
-            <Route path="/templates" component={Configuration} />
-            <Route path="/add-elements" component={AddElements} />
+            <Route path="/templates/edit/:id?" component={AddElements} />
+            <Route exact path="/templates" component={TemplatesList} />
           </Switch>
         </Box>
       </Box>

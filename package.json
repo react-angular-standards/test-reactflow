@@ -34,6 +34,7 @@
     "@xyflow/react": "^12.11.0",
     "date-fns": "^2.30.0",
     "file-saver": "^2.0.5",
+    "json-server": "^0.17.4",
     "jspdf": "^2.5.2",
     "jspdf-autotable": "^3.8.4",
     "material-react-table": "^1.15.1",
@@ -57,7 +58,8 @@
     "start": "react-scripts start",
     "build": "react-scripts build",
     "test": "react-scripts test",
-    "eject": "react-scripts eject"
+    "eject": "react-scripts eject",
+    "server": "json-server --watch db.json --port 3002"
   },
   "eslintConfig": {
     "extends": [

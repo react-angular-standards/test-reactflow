@@ -485,10 +485,16 @@ const nodeTypes = { templateNode: TemplateNode };
 /* ------------------------------------------------------------------ */
 /*  Wrapper so useReactFlow works                                     */
 /* ------------------------------------------------------------------ */
-export default function TemplateFlow({ root }: { root: Types }) {
+export default function TemplateFlow({
+  root,
+  onTreeChange,
+}: {
+  root: Types;
+  onTreeChange?: (tree: Types) => void;
+}) {
   return (
     <ReactFlowProvider>
-      <TemplateFlowInner root={root} />
+      <TemplateFlowInner root={root} onTreeChange={onTreeChange} />
     </ReactFlowProvider>
   );
 }
@@ -496,7 +502,13 @@ export default function TemplateFlow({ root }: { root: Types }) {
 /* ------------------------------------------------------------------ */
 /*  Main inner component                                              */
 /* ------------------------------------------------------------------ */
-function TemplateFlowInner({ root }: { root: Types }) {
+function TemplateFlowInner({
+  root,
+  onTreeChange,
+}: {
+  root: Types;
+  onTreeChange?: (tree: Types) => void;
+}) {
   const styles = useStyles();
   const [detailItem, setDetailItem] = useState<Types | null>(null);
   const [treeRoot, setTreeRoot] = useState<Types>(root);
@@ -572,6 +584,7 @@ function TemplateFlowInner({ root }: { root: Types }) {
       addNodeToParent(newTree, targetId, nodeToMove);
 
       setTreeRoot(newTree);
+      onTreeChange?.(newTree);
       const rebuilt = buildFlowData(newTree, onInfoClick);
       setNodes(rebuilt.nodes);
       setEdges(rebuilt.edges);
@@ -626,6 +639,7 @@ function TemplateFlowInner({ root }: { root: Types }) {
       addNodeToParent(newTree, closest.id, newItem);
 
       setTreeRoot(newTree);
+      onTreeChange?.(newTree);
       const rebuilt = buildFlowData(newTree, onInfoClick);
       setNodes(rebuilt.nodes);
       setEdges(rebuilt.edges);
