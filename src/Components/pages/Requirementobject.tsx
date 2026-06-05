@@ -11,8 +11,19 @@
 import React, { MouseEventHandler } from "react";
 import { useState } from "react";
 import { Link, useParams } from "react-router-dom";
-import { ActionList, ActionMenu, BranchName, IconButton, StateLabel } from "@primer/react";
-import { ArchiveIcon, ColumnsIcon, PencilIcon, VersionsIcon } from "@primer/octicons-react";
+import {
+  ActionList,
+  ActionMenu,
+  BranchName,
+  IconButton,
+  StateLabel,
+} from "@primer/react";
+import {
+  ArchiveIcon,
+  ColumnsIcon,
+  PencilIcon,
+  VersionsIcon,
+} from "@primer/octicons-react";
 import { DataTable, PageHeader } from "@primer/react/lib-esm/drafts";
 import Form from "./form/form";
 import NameAutocomplete from "./nameAutocomplete";
@@ -97,8 +108,7 @@ import { TextField } from "@mui/material";
 import { stringToColour } from "../Util/utils";
 import ReactFilterBox from "react-filter-box";
 import { CustomAutoComplete, CustomResultProcessing } from "./Field";
-import SearchComponent from "../globalSearch";
-
+import SearchComponent from "../../globalSearch";
 
 const useStyles = makeStyles({
   root: {
@@ -193,7 +203,10 @@ const emptyfields = (): IFieldType => ({
 
 export const RequirementObject = (): JSX.Element => {
   const styles = useStyles();
-  const CalendarMonth = bundleIcon(CalendarMonth20Filled, CalendarMonth20Regular);
+  const CalendarMonth = bundleIcon(
+    CalendarMonth20Filled,
+    CalendarMonth20Regular,
+  );
   const [template, setTemplate] = useState<any>({
     title: "",
     type: "object",
@@ -203,7 +216,8 @@ export const RequirementObject = (): JSX.Element => {
   const [formprop, setformprop] = useState<IFieldType>(emptyfields);
   const [templateObjectList, setTemplateObjectList] = useState<any>([]);
   const [requirementObjectList, setRequirementObjectList] = useState<any>([]);
-  const [requirementObjectListForSearch, setRequirementObjectListForSearch] = useState<any>([]);
+  const [requirementObjectListForSearch, setRequirementObjectListForSearch] =
+    useState<any>([]);
   const [formprop1, setformprop1] = useState<IFieldType>(emptyfields);
   const [count, setCount] = useState<number>(0);
   const toasterId = useId("toaster");
@@ -211,19 +225,31 @@ export const RequirementObject = (): JSX.Element => {
   const [intent, setIntent] = React.useState<ToastIntent>("success");
   const [displayResult, setDisplayResult] = useState<boolean>(false);
   const [columns, setColumns] = useState<any>([]);
-  const customAutoComplete = new CustomAutoComplete(templateObjectList, columns);
+  const customAutoComplete = new CustomAutoComplete(
+    templateObjectList,
+    columns,
+  );
   const [displaySaveMessage, setDisplaySaveMessage] = useState<boolean>(false);
   const [spinIndicator, setspinIndicator] = useState<boolean>(false);
   const [displaysearch, setDisplaySearch] = useState<boolean>(false);
 
   const onParse = (expression: any) => {
     // console.log$&
-    setRequirementObjectList(new CustomResultProcessing(columns).process(templateObjectList, expression));
+    setRequirementObjectList(
+      new CustomResultProcessing(columns).process(
+        templateObjectList,
+        expression,
+      ),
+    );
   };
 
   React.useEffect(() => {
     const tempcol = columns;
-    tempcol.push({ columnField: "header", type: "selection", columnText: "header" });
+    tempcol.push({
+      columnField: "header",
+      type: "selection",
+      columnText: "header",
+    });
     tempcol.push({ columnField: "prompt", type: "text" });
     tempcol.push({ columnField: "hasInput", type: "selection" });
     // tempcol.push({ columnField: "Updatedby", type: "selection" });
@@ -247,9 +273,13 @@ export const RequirementObject = (): JSX.Element => {
   }, [columns]);
 
   const refresh = () => {
-    setRequirementObjectListForSearch([])
+    setRequirementObjectListForSearch([]);
     const tempcol = columns;
-    tempcol.push({ columnField: "header", type: "selection", columnText: "header" });
+    tempcol.push({
+      columnField: "header",
+      type: "selection",
+      columnText: "header",
+    });
     tempcol.push({ columnField: "prompt", type: "text" });
     tempcol.push({ columnField: "hasInput", type: "selection" });
     // tempcol.push({ columnField: "Updatedby", type: "selection" });
@@ -270,7 +300,7 @@ export const RequirementObject = (): JSX.Element => {
         setDisplayResult(true);
         setDisplaySearch(true);
       });
-  }
+  };
 
   const create_new_template = () => {
     if (addTemplate == true) {
@@ -282,12 +312,8 @@ export const RequirementObject = (): JSX.Element => {
       setDisplaySaveMessage(false);
     }
     setDisplaySaveMessage(false);
-    setspinIndicator(false)
-
-
+    setspinIndicator(false);
   };
-
-
 
   const add_new_field = (type: string) => {
     const field: IFieldType = emptyfields();
@@ -373,9 +399,7 @@ export const RequirementObject = (): JSX.Element => {
     setAddTemplate(true);
   };
 
-
   const save_template_object = () => {
-
     // const isFormValid = (formprop.hasInput == true && formprop.inputType)
 
     // if (!isFormValid) {
@@ -384,9 +408,12 @@ export const RequirementObject = (): JSX.Element => {
     // }
 
     setDisplaySaveMessage(false);
-    setspinIndicator(true)
+    setspinIndicator(true);
 
-    console.log("🚀 ~ file: Requirementobject.tsx ~ line 387 ~ RequirementObject ~ JSON.stringify(formprop)", JSON.stringify(formprop))
+    console.log(
+      "🚀 ~ file: Requirementobject.tsx ~ line 387 ~ RequirementObject ~ JSON.stringify(formprop)",
+      JSON.stringify(formprop),
+    );
     fetch(UrlConstant.MANAGE_SAVE_TEMPLATE + "RequirementObject", {
       method: "post",
       headers: {
@@ -406,11 +433,9 @@ export const RequirementObject = (): JSX.Element => {
           setDisplaySaveMessage(true);
           setTimeout(() => {
             setDisplaySaveMessage(false);
-
           }, 2000);
 
-          setspinIndicator(false)
-
+          setspinIndicator(false);
 
           // let temptemplateobjectlist = [];
           // temptemplateobjectlist = result;
@@ -418,10 +443,8 @@ export const RequirementObject = (): JSX.Element => {
           // setDisplayResult(true);
           // // console.log$&
         });
-    })
-      ;
+    });
   };
-
 
   const [dialogOpen, setDialogOpen] = useState(false);
   const [loading, setLoading] = useState(false);
@@ -457,7 +480,7 @@ export const RequirementObject = (): JSX.Element => {
         handleCloseDialog();
       })
       .catch((error) => {
-        console.error('Error deleting item:', error);
+        console.error("Error deleting item:", error);
         handleCloseDialog();
       });
   };
@@ -466,11 +489,12 @@ export const RequirementObject = (): JSX.Element => {
     dispatchToast(
       <Toast>
         <ToastTitle>Title</ToastTitle>
-        <ToastBody subtitle="Subtitle">Requirement  added successfully. </ToastBody>
+        <ToastBody subtitle="Subtitle">
+          Requirement added successfully.{" "}
+        </ToastBody>
       </Toast>,
-      { intent: "success" }
+      { intent: "success" },
     );
-
 
   const FileAttachmentInput = () => {
     const [selectedFile, setSelectedFile] = useState(null);
@@ -494,8 +518,7 @@ export const RequirementObject = (): JSX.Element => {
         {selectedFile && <p>Selected file: {selectedFile.name}</p>}
       </div>
     );
-  }
-
+  };
 
   // const delete_row = (id: any) => {
   //   fetch(UrlConstant.DELETE_SAVE_TEMPLATE + "RequirementObject/" + id, {
@@ -511,7 +534,11 @@ export const RequirementObject = (): JSX.Element => {
 
   return (
     <div>
-      <Breadcrumb aria-label="Large breadcrumb example with buttons" size="small" style={{ marginBottom: 20 }}>
+      <Breadcrumb
+        aria-label="Large breadcrumb example with buttons"
+        size="small"
+        style={{ marginBottom: 20 }}
+      >
         <BreadcrumbItem>
           <BreadcrumbButton href="/" icon={<Home20Filled />}>
             Home
@@ -534,13 +561,20 @@ export const RequirementObject = (): JSX.Element => {
 
       </header> */}
 
-      <Button onClick={create_new_template} size="medium" appearance="outline" icon={<CalendarMonth />}>
+      <Button
+        onClick={create_new_template}
+        size="medium"
+        appearance="outline"
+        icon={<CalendarMonth />}
+      >
         ADD REQUIREMENT
       </Button>
       <div className="row">
         <div className="row mg-t-20">
-
-          <SearchComponent data={requirementObjectListForSearch} setSearchResults={setRequirementObjectList} />
+          <SearchComponent
+            data={requirementObjectListForSearch}
+            setSearchResults={setRequirementObjectList}
+          />
 
           {/* <div style={{ paddingTop: 10 }}>
             {displaysearch && (
@@ -554,7 +588,10 @@ export const RequirementObject = (): JSX.Element => {
           </div> */}
           <ActionList>
             {requirementObjectList.map((item1: any) => (
-              <ActionList.Item key={item1.id} style={{ borderBottom: "1px solid #e6e6e6", borderRadius: 0 }}>
+              <ActionList.Item
+                key={item1.id}
+                style={{ borderBottom: "1px solid #e6e6e6", borderRadius: 0 }}
+              >
                 <ActionList.LeadingVisual>
                   <VersionsIcon size={16} />
                 </ActionList.LeadingVisual>
@@ -573,21 +610,29 @@ export const RequirementObject = (): JSX.Element => {
                   <div style={{ margin: 5 }}></div>
                 </ActionList.Description>
                 <ActionList.TrailingVisual>
-
                   <Link
                     onClick={() => edit_from_card(item1)}
-                    style={{ marginRight: 8, textDecoration: "none", color: "#828282" }} to={undefined}                  >
-                    <PencilIcon size={18} fill='#28a745' /> {/* Green color */}
+                    style={{
+                      marginRight: 8,
+                      textDecoration: "none",
+                      color: "#828282",
+                    }}
+                    to={undefined}
+                  >
+                    <PencilIcon size={18} fill="#28a745" /> {/* Green color */}
                   </Link>
-
 
                   <Link
                     onClick={() => handleDelete(item1.id)}
-                    style={{ marginRight: 8, textDecoration: "none", color: "#828282" }} to={undefined}                  >
-                    <TrashIcon fill='#dc3545' size={18} />
+                    style={{
+                      marginRight: 8,
+                      textDecoration: "none",
+                      color: "#828282",
+                    }}
+                    to={undefined}
+                  >
+                    <TrashIcon fill="#dc3545" size={18} />
                   </Link>
-
-
                 </ActionList.TrailingVisual>
               </ActionList.Item>
             ))}
@@ -601,7 +646,12 @@ export const RequirementObject = (): JSX.Element => {
                         initialSortColumn="header" /> */}
         </div>
 
-        <OverlayDrawer position="end" open={addTemplate} modalType="modal" size={"large"}>
+        <OverlayDrawer
+          position="end"
+          open={addTemplate}
+          modalType="modal"
+          size={"large"}
+        >
           <DrawerHeader>
             <DrawerHeaderTitle
               action={
@@ -623,7 +673,11 @@ export const RequirementObject = (): JSX.Element => {
                 <div className="col-md-4"></div>
                 <div className="row">
                   <div className="col-md-6 mt-4">
-                    <Card appearance="outline" style={{ background: "#fffff8" }} className="mb-4">
+                    <Card
+                      appearance="outline"
+                      style={{ background: "#fffff8" }}
+                      className="mb-4"
+                    >
                       <Label size="small" weight="semibold" color="brand">
                         Header
                       </Label>
@@ -653,29 +707,61 @@ export const RequirementObject = (): JSX.Element => {
                         <>
                           <Label size="small">Input Type</Label>
                           <TagGroup aria-label="Simple tag group with InteractionTag">
-                            <InteractionTag appearance={formprop.inputType == "textbox" ? "brand" : "outline"}>
-                              <InteractionTagPrimary onClick={() => setformtype("textbox")}>
+                            <InteractionTag
+                              appearance={
+                                formprop.inputType == "textbox"
+                                  ? "brand"
+                                  : "outline"
+                              }
+                            >
+                              <InteractionTagPrimary
+                                onClick={() => setformtype("textbox")}
+                              >
                                 <Label size="small" weight="semibold">
                                   Text
                                 </Label>
                               </InteractionTagPrimary>
                             </InteractionTag>
-                            <InteractionTag appearance={formprop.inputType == "textarea" ? "brand" : "outline"}>
-                              <InteractionTagPrimary onClick={() => setformtype("textarea")}>
+                            <InteractionTag
+                              appearance={
+                                formprop.inputType == "textarea"
+                                  ? "brand"
+                                  : "outline"
+                              }
+                            >
+                              <InteractionTagPrimary
+                                onClick={() => setformtype("textarea")}
+                              >
                                 <Label size="small" weight="semibold">
                                   Text : Multiple
                                 </Label>
                               </InteractionTagPrimary>
                             </InteractionTag>
-                            <InteractionTag appearance={formprop.inputType == "select" ? "brand" : "outline"}>
-                              <InteractionTagPrimary onClick={() => setformtype("select")}>
+                            <InteractionTag
+                              appearance={
+                                formprop.inputType == "select"
+                                  ? "brand"
+                                  : "outline"
+                              }
+                            >
+                              <InteractionTagPrimary
+                                onClick={() => setformtype("select")}
+                              >
                                 <Label size="small" weight="semibold">
                                   Option
                                 </Label>
                               </InteractionTagPrimary>
                             </InteractionTag>
-                            <InteractionTag appearance={formprop.inputType == "multiselect" ? "brand" : "outline"}>
-                              <InteractionTagPrimary onClick={() => setformtype("multiselect")}>
+                            <InteractionTag
+                              appearance={
+                                formprop.inputType == "multiselect"
+                                  ? "brand"
+                                  : "outline"
+                              }
+                            >
+                              <InteractionTagPrimary
+                                onClick={() => setformtype("multiselect")}
+                              >
                                 <Label size="small" weight="semibold">
                                   Option : Multiple
                                 </Label>
@@ -684,29 +770,61 @@ export const RequirementObject = (): JSX.Element => {
                           </TagGroup>
                           <div className="row">
                             <TagGroup>
-                              <InteractionTag appearance={formprop.inputType == "date" ? "brand" : "outline"}>
-                                <InteractionTagPrimary onClick={() => setformtype("date")}>
+                              <InteractionTag
+                                appearance={
+                                  formprop.inputType == "date"
+                                    ? "brand"
+                                    : "outline"
+                                }
+                              >
+                                <InteractionTagPrimary
+                                  onClick={() => setformtype("date")}
+                                >
                                   <Label size="small" weight="semibold">
                                     Date
                                   </Label>
                                 </InteractionTagPrimary>
                               </InteractionTag>
-                              <InteractionTag appearance={formprop.inputType == "number" ? "brand" : "outline"}>
-                                <InteractionTagPrimary onClick={() => setformtype("number")}>
+                              <InteractionTag
+                                appearance={
+                                  formprop.inputType == "number"
+                                    ? "brand"
+                                    : "outline"
+                                }
+                              >
+                                <InteractionTagPrimary
+                                  onClick={() => setformtype("number")}
+                                >
                                   <Label size="small" weight="semibold">
                                     Number
                                   </Label>
                                 </InteractionTagPrimary>
                               </InteractionTag>
-                              <InteractionTag appearance={formprop.inputType == "autoComplete" ? "brand" : "outline"}>
-                                <InteractionTagPrimary onClick={() => setformtype("autoComplete")}>
+                              <InteractionTag
+                                appearance={
+                                  formprop.inputType == "autoComplete"
+                                    ? "brand"
+                                    : "outline"
+                                }
+                              >
+                                <InteractionTagPrimary
+                                  onClick={() => setformtype("autoComplete")}
+                                >
                                   <Label size="small" weight="semibold">
                                     Name
                                   </Label>
                                 </InteractionTagPrimary>
                               </InteractionTag>
-                              <InteractionTag appearance={formprop.inputType == "attachments" ? "brand" : "outline"}>
-                                <InteractionTagPrimary onClick={() => setformtype("attachments")}>
+                              <InteractionTag
+                                appearance={
+                                  formprop.inputType == "attachments"
+                                    ? "brand"
+                                    : "outline"
+                                }
+                              >
+                                <InteractionTagPrimary
+                                  onClick={() => setformtype("attachments")}
+                                >
                                   <Label size="small" weight="semibold">
                                     Attachments
                                   </Label>
@@ -715,7 +833,8 @@ export const RequirementObject = (): JSX.Element => {
                             </TagGroup>
                           </div>
 
-                          {(formprop.inputType == "multiselect" || formprop.inputType == "select") && (
+                          {(formprop.inputType == "multiselect" ||
+                            formprop.inputType == "select") && (
                             <Textarea
                               name="choices"
                               onChange={(e) => handletextareachange(e)}
@@ -723,8 +842,13 @@ export const RequirementObject = (): JSX.Element => {
                               size="small"
                             />
                           )}
-                          {(formprop.inputType == "multiselect" || formprop.inputType == "select") && (
-                            <Badge color="brand" shape="rounded" appearance="tint">
+                          {(formprop.inputType == "multiselect" ||
+                            formprop.inputType == "select") && (
+                            <Badge
+                              color="brand"
+                              shape="rounded"
+                              appearance="tint"
+                            >
                               enter options separated by comma ( , )
                             </Badge>
                           )}
@@ -733,9 +857,15 @@ export const RequirementObject = (): JSX.Element => {
                     </Card>
 
                     {displaySaveMessage && (
-                      <MessageBar key={intent} intent={intent} style={{ marginTop: 10 }}>
+                      <MessageBar
+                        key={intent}
+                        intent={intent}
+                        style={{ marginTop: 10 }}
+                      >
                         <MessageBarBody>
-                          <MessageBarTitle>Requirement  added successfully. </MessageBarTitle>
+                          <MessageBarTitle>
+                            Requirement added successfully.{" "}
+                          </MessageBarTitle>
                         </MessageBarBody>
                       </MessageBar>
                     )}
@@ -755,15 +885,9 @@ export const RequirementObject = (): JSX.Element => {
                       shape="square"
                       disabled={spinIndicator}
                       onClick={save_template_object}
-
                     >
-                      {spinIndicator ? (
-                        <Spinner size="small" />
-                      ) : (
-                        'Save'
-                      )}
+                      {spinIndicator ? <Spinner size="small" /> : "Save"}
                     </Button>
-
 
                     <Button
                       onClick={() => create_new_template()}
@@ -775,7 +899,11 @@ export const RequirementObject = (): JSX.Element => {
                     </Button>
                   </div>
                   <div className="col-md-6">
-                    <Card appearance="outline" className="mb-4 mt-4" style={{ background: "#fffff8" }}>
+                    <Card
+                      appearance="outline"
+                      className="mb-4 mt-4"
+                      style={{ background: "#fffff8" }}
+                    >
                       <Tabs>
                         <TabList>
                           <Tab>UI</Tab>
@@ -786,20 +914,37 @@ export const RequirementObject = (): JSX.Element => {
                             <Label style={{ fontStyle: "oblique" }}>
                               <strong>{formprop.header}</strong>
                             </Label>
-                            <div style={{ background: "brown", width: "100%", height: "1px" }}></div>
+                            <div
+                              style={{
+                                background: "brown",
+                                width: "100%",
+                                height: "1px",
+                              }}
+                            ></div>
                             <Label size="small">
                               <strong>{formprop.prompt}</strong>
                             </Label>
                             {formprop.inputType == "textbox" && <Input />}
-                            {formprop.inputType == "autoComplete" && <NameAutocomplete />}
-                            {formprop.inputType == "attachments" && <FileAttachmentInput />}
-                            {formprop.inputType == "date" && <Input type="date" />}
-                            {formprop.inputType == "number" && <Input type="number" />}
+                            {formprop.inputType == "autoComplete" && (
+                              <NameAutocomplete />
+                            )}
+                            {formprop.inputType == "attachments" && (
+                              <FileAttachmentInput />
+                            )}
+                            {formprop.inputType == "date" && (
+                              <Input type="date" />
+                            )}
+                            {formprop.inputType == "number" && (
+                              <Input type="number" />
+                            )}
                             {formprop.inputType == "textarea" && <Textarea />}
                             {formprop.inputType == "select" && (
                               <Dropdown multiselect={false}>
                                 {formprop.choices.map((option) => (
-                                  <Option key={option} disabled={option === "Ferret"}>
+                                  <Option
+                                    key={option}
+                                    disabled={option === "Ferret"}
+                                  >
                                     {option}
                                   </Option>
                                 ))}
@@ -808,7 +953,10 @@ export const RequirementObject = (): JSX.Element => {
                             {formprop.inputType == "multiselect" && (
                               <Dropdown multiselect={true}>
                                 {formprop.choices.map((option) => (
-                                  <Option key={option} disabled={option === "Ferret"}>
+                                  <Option
+                                    key={option}
+                                    disabled={option === "Ferret"}
+                                  >
                                     {option}
                                   </Option>
                                 ))}
@@ -841,5 +989,3 @@ export const RequirementObject = (): JSX.Element => {
     </div>
   );
 };
-
-

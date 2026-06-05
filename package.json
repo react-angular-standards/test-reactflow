@@ -11,6 +11,7 @@
     "@fluentui/react": "^8.125.6",
     "@fluentui/react-components": "^9.74.1",
     "@fluentui/react-nav-preview": "^0.5.3",
+    "@mui/icons-material": "^5.18.0",
     "@mui/material": "^5.18.0",
     "@mui/x-data-grid": "^6.20.4",
     "@primer/octicons-react": "^17.12.0",
