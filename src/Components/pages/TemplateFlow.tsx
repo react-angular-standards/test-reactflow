@@ -115,6 +115,11 @@ interface PaletteGroup {
 
 const PALETTE_GROUPS: PaletteGroup[] = [
   {
+    title: "All",
+    color: "#1976d2",
+    items: [],
+  },
+  {
     title: "Text Inputs",
     color: "#4caf50",
     items: [
@@ -651,7 +656,7 @@ function TemplateFlowInner({
   );
 
   /* ---- Tabs + search for palette -------------------------------- */
-  const [activeTab, setActiveTab] = useState<string>(PALETTE_GROUPS[0].title);
+  const [activeTab, setActiveTab] = useState<string>("All");
 
   const filteredGroups = useMemo(() => {
     const q = searchQuery.toLowerCase().trim();
@@ -670,8 +675,18 @@ function TemplateFlowInner({
     return groups;
   }, [searchQuery]);
 
-  const activeGroup =
-    filteredGroups.find((g) => g.title === activeTab) || filteredGroups[0];
+  const activeGroup = useMemo(() => {
+    const found = filteredGroups.find((g) => g.title === activeTab);
+    if (found) return found;
+    // "All" tab: merge every item from every group
+    if (activeTab === "All") {
+      const allItems = filteredGroups
+        .filter((g) => g.title !== "All")
+        .flatMap((g) => g.items);
+      return { title: "All", color: "#1976d2", items: allItems };
+    }
+    return filteredGroups[0];
+  }, [filteredGroups, activeTab]);
 
   return (
     <div>
