@@ -1,8 +1,10 @@
 /**
  * @file React Flow visualizer for nested template objects
  *  - Shows parent/child edges
- *  - Click node → detail panel
- *  - Drag node onto another node → reparent (move to different parent)
+ *  - Info icon on each node → detail modal
+ *  - Right panel = draggable object palette
+ *  - Drag palette item onto a node → adds as child
+ *  - Drag node onto another node → reparent
  */
 import React, { useState, useCallback, useMemo, useRef } from "react";
 import {
@@ -23,14 +25,13 @@ import {
   useReactFlow,
 } from "@xyflow/react";
 import "@xyflow/react/dist/style.css";
-import { Types } from "./TemplateTypes";
+import { Types, Type } from "./TemplateTypes";
 import {
   Card,
   CardHeader,
   Label,
   makeStyles,
   Text,
-  Button,
 } from "@fluentui/react-components";
 
 const useStyles = makeStyles({
@@ -42,7 +43,7 @@ const useStyles = makeStyles({
     background: "#fafafa",
   },
   detailPanel: {
-    width: "320px",
+    width: "280px",
     padding: "16px",
     background: "#fff",
     borderLeft: "1px solid #e0e0e0",
@@ -72,13 +73,169 @@ const useStyles = makeStyles({
     color: "#666",
     marginTop: "4px",
   },
+  paletteItem: {
+    padding: "10px 12px",
+    marginBottom: "8px",
+    borderRadius: "6px",
+    border: "1px solid #e0e0e0",
+    background: "#fff",
+    cursor: "grab",
+    fontSize: "13px",
+    transition: "box-shadow 0.15s",
+    ":hover": {
+      boxShadow: "0 2px 6px rgba(0,0,0,0.1)",
+    },
+  },
 });
+
+/* ------------------------------------------------------------------ */
+/*  Palette objects that can be dragged into the flow                 */
+/* ------------------------------------------------------------------ */
+const PALETTE: Types[] = [
+  {
+    UniqueID: "palette-text",
+    display: true,
+    description: "Single line text input",
+    type: Type.RequirementObject,
+    UPDATED_ON: new Date(),
+    sponsoring_customer: "",
+    node_type: Type.RequirementObject,
+    isDeleted2: false,
+    header: "Text Field",
+    inputType: "textbox",
+    id: -1,
+    choices: [],
+    hasInput: true,
+    prompt: "Enter value",
+    children: [],
+  },
+  {
+    UniqueID: "palette-textarea",
+    display: true,
+    description: "Multi-line text input",
+    type: Type.RequirementObject,
+    UPDATED_ON: new Date(),
+    sponsoring_customer: "",
+    node_type: Type.RequirementObject,
+    isDeleted2: false,
+    header: "Text Area",
+    inputType: "textarea",
+    id: -2,
+    choices: [],
+    hasInput: true,
+    prompt: "Enter detailed text",
+    children: [],
+  },
+  {
+    UniqueID: "palette-select",
+    display: true,
+    description: "Single select dropdown",
+    type: Type.RequirementObject,
+    UPDATED_ON: new Date(),
+    sponsoring_customer: "",
+    node_type: Type.RequirementObject,
+    isDeleted2: false,
+    header: "Select Dropdown",
+    inputType: "select",
+    id: -3,
+    choices: ["Option A", "Option B", "Option C"],
+    hasInput: true,
+    prompt: "Select an option",
+    children: [],
+  },
+  {
+    UniqueID: "palette-multiselect",
+    display: true,
+    description: "Multiple selection dropdown",
+    type: Type.RequirementObject,
+    UPDATED_ON: new Date(),
+    sponsoring_customer: "",
+    node_type: Type.RequirementObject,
+    isDeleted2: false,
+    header: "Multi Select",
+    inputType: "multiselect",
+    id: -4,
+    choices: ["Choice 1", "Choice 2", "Choice 3"],
+    hasInput: true,
+    prompt: "Select multiple options",
+    children: [],
+  },
+  {
+    UniqueID: "palette-date",
+    display: true,
+    description: "Date selection field",
+    type: Type.RequirementObject,
+    UPDATED_ON: new Date(),
+    sponsoring_customer: "",
+    node_type: Type.RequirementObject,
+    isDeleted2: false,
+    header: "Date Picker",
+    inputType: "date",
+    id: -5,
+    choices: [],
+    hasInput: true,
+    prompt: "Pick a date",
+    children: [],
+  },
+  {
+    UniqueID: "palette-number",
+    display: true,
+    description: "Numeric input field",
+    type: Type.RequirementObject,
+    UPDATED_ON: new Date(),
+    sponsoring_customer: "",
+    node_type: Type.RequirementObject,
+    isDeleted2: false,
+    header: "Number Field",
+    inputType: "number",
+    id: -6,
+    choices: [],
+    hasInput: true,
+    prompt: "Enter a number",
+    children: [],
+  },
+  {
+    UniqueID: "palette-attachment",
+    display: true,
+    description: "File attachment input",
+    type: Type.RequirementObject,
+    UPDATED_ON: new Date(),
+    sponsoring_customer: "",
+    node_type: Type.RequirementObject,
+    isDeleted2: false,
+    header: "Attachment",
+    inputType: "attachments",
+    id: -7,
+    choices: [],
+    hasInput: true,
+    prompt: "Upload files",
+    children: [],
+  },
+  {
+    UniqueID: "palette-section",
+    display: true,
+    description: "Group related fields",
+    type: Type.RequirementObject,
+    UPDATED_ON: new Date(),
+    sponsoring_customer: "",
+    node_type: Type.RequirementObject,
+    isDeleted2: false,
+    header: "Section Divider",
+    inputType: "section",
+    id: -8,
+    choices: [],
+    hasInput: false,
+    prompt: "Section header",
+    children: [],
+  },
+];
 
 /* ------------------------------------------------------------------ */
 /*  Build flat nodes + edges from recursive Types tree                */
 /* ------------------------------------------------------------------ */
 function buildFlowData(
   root: Types,
+  onInfoClick: (item: Types) => void,
   parentId: string | null = null,
   depth = 0,
   siblingIndex = 0,
@@ -90,7 +247,7 @@ function buildFlowData(
   const node: Node = {
     id: nodeId,
     position: { x, y },
-    data: { item: root, parentId },
+    data: { item: root, parentId, onInfoClick },
     type: "templateNode",
     draggable: true,
   };
@@ -111,7 +268,7 @@ function buildFlowData(
   }
 
   root.children?.forEach((child, idx) => {
-    const childData = buildFlowData(child, nodeId, depth + 1, idx);
+    const childData = buildFlowData(child, onInfoClick, nodeId, depth + 1, idx);
     nodes.push(...childData.nodes);
     edges.push(...childData.edges);
   });
@@ -155,14 +312,16 @@ function cloneTree(root: Types): Types {
 }
 
 /* ------------------------------------------------------------------ */
-/*  Custom node with Handles                                          */
+/*  Custom node with info icon + Handles                              */
 /* ------------------------------------------------------------------ */
 const TemplateNode = ({ data, selected }: any) => {
   const item: Types = data.item;
+  const onInfo = data.onInfoClick as (item: Types) => void;
+
   return (
     <div
       style={{
-        padding: "10px 14px",
+        padding: "10px 28px 10px 14px",
         borderRadius: "8px",
         background: selected ? "#e3f2fd" : "#fff",
         border: selected ? "2px solid #1976d2" : "1px solid #ccc",
@@ -172,7 +331,31 @@ const TemplateNode = ({ data, selected }: any) => {
         position: "relative",
       }}
     >
-      {/* Target handle (left) — parent connects here */}
+      {/* Info icon — top-right */}
+      <button
+        onClick={(e) => {
+          e.stopPropagation();
+          onInfo?.(item);
+        }}
+        title="View details"
+        style={{
+          position: "absolute",
+          top: 4,
+          right: 4,
+          background: "none",
+          border: "none",
+          cursor: "pointer",
+          padding: "2px 5px",
+          borderRadius: "50%",
+          fontSize: 13,
+          color: "#666",
+          lineHeight: 1,
+        }}
+      >
+        ⓘ
+      </button>
+
+      {/* Target handle (left) */}
       <Handle
         type="target"
         position={Position.Left}
@@ -191,7 +374,7 @@ const TemplateNode = ({ data, selected }: any) => {
         </div>
       )}
 
-      {/* Source handle (right) — connects to children */}
+      {/* Source handle (right) */}
       <Handle
         type="source"
         position={Position.Right}
@@ -204,9 +387,8 @@ const TemplateNode = ({ data, selected }: any) => {
 const nodeTypes = { templateNode: TemplateNode };
 
 /* ------------------------------------------------------------------ */
-/*  Main component                                                     */
+/*  Wrapper so useReactFlow works                                     */
 /* ------------------------------------------------------------------ */
-/* Wrapper so useReactFlow works */
 export default function TemplateFlow({ root }: { root: Types }) {
   return (
     <ReactFlowProvider>
@@ -215,18 +397,28 @@ export default function TemplateFlow({ root }: { root: Types }) {
   );
 }
 
+/* ------------------------------------------------------------------ */
+/*  Main inner component                                              */
+/* ------------------------------------------------------------------ */
 function TemplateFlowInner({ root }: { root: Types }) {
   const styles = useStyles();
-  const [selectedNode, setSelectedNode] = useState<Types | null>(null);
+  const [detailItem, setDetailItem] = useState<Types | null>(null);
   const [treeRoot, setTreeRoot] = useState<Types>(root);
   const [dragMsg, setDragMsg] = useState<string>("");
   const flowRef = useRef<HTMLDivElement>(null);
 
-  const initial = useMemo(() => buildFlowData(treeRoot), [treeRoot]);
+  const onInfoClick = useCallback((item: Types) => {
+    setDetailItem(item);
+  }, []);
+
+  const initial = useMemo(
+    () => buildFlowData(treeRoot, onInfoClick),
+    [treeRoot, onInfoClick],
+  );
   const [nodes, setNodes, onNodesChange] = useNodesState(initial.nodes);
   const [edges, setEdges, onEdgesChange] = useEdgesState(initial.edges);
 
-  const { getNodes } = useReactFlow();
+  const { getNodes, screenToFlowPosition } = useReactFlow();
 
   const onConnect = useCallback(
     (params: Connection) => setEdges((eds) => addEdge(params, eds)),
@@ -234,10 +426,11 @@ function TemplateFlowInner({ root }: { root: Types }) {
   );
 
   const onNodeClick = useCallback((_: any, node: Node) => {
-    setSelectedNode(node.data.item as Types);
+    // Node selection no longer shows detail panel — info icon does that
+    void node;
   }, []);
 
-  /* ---- Drag-to-reparent ------------------------------------------ */
+  /* ---- Drag a node onto another → reparent ----------------------- */
   const onNodeDragStop = useCallback(
     (_event: any, draggedNode: Node) => {
       const allNodes = getNodes();
@@ -264,7 +457,6 @@ function TemplateFlowInner({ root }: { root: Types }) {
       const draggedId = draggedNode.id;
       const targetId = closestNode.id;
 
-      // Prevent dropping onto self or own descendant
       const isDescendant = (parent: Types, childId: string): boolean => {
         if (parent.UniqueID === childId) return true;
         return (parent.children || []).some((c) => isDescendant(c, childId));
@@ -272,10 +464,10 @@ function TemplateFlowInner({ root }: { root: Types }) {
       const targetItem = findNodeInTree(treeRoot, targetId);
       if (targetItem && isDescendant(targetItem, draggedId)) {
         setDragMsg("Cannot move a node into its own child.");
+        setTimeout(() => setDragMsg(""), 3000);
         return;
       }
 
-      // Perform reparent
       const newTree = cloneTree(treeRoot);
       const nodeToMove = findNodeInTree(newTree, draggedId);
       if (!nodeToMove) return;
@@ -284,14 +476,68 @@ function TemplateFlowInner({ root }: { root: Types }) {
       addNodeToParent(newTree, targetId, nodeToMove);
 
       setTreeRoot(newTree);
-      const rebuilt = buildFlowData(newTree);
+      const rebuilt = buildFlowData(newTree, onInfoClick);
       setNodes(rebuilt.nodes);
       setEdges(rebuilt.edges);
       const targetHeader = (closestNode.data.item as Types).header;
       setDragMsg(`Moved "${nodeToMove.header}" under "${targetHeader}"`);
       setTimeout(() => setDragMsg(""), 3000);
     },
-    [getNodes, treeRoot, setNodes, setEdges],
+    [getNodes, treeRoot, onInfoClick, setNodes, setEdges],
+  );
+
+  /* ---- Drag from palette onto canvas → add as child -------------- */
+  const onDragOver = useCallback((e: React.DragEvent) => {
+    e.preventDefault();
+    e.dataTransfer.dropEffect = "move";
+  }, []);
+
+  const onDrop = useCallback(
+    (e: React.DragEvent) => {
+      e.preventDefault();
+      const json = e.dataTransfer.getData("application/json");
+      if (!json) return;
+
+      const droppedItem: Types = JSON.parse(json);
+      const pos = screenToFlowPosition({
+        x: e.clientX,
+        y: e.clientY,
+      });
+
+      const allNodes = getNodes();
+      let closest: Node | null = null;
+      let minDist = Infinity;
+
+      for (const n of allNodes) {
+        const dist = Math.hypot(n.position.x - pos.x, n.position.y - pos.y);
+        if (dist < minDist) {
+          minDist = dist;
+          closest = n;
+        }
+      }
+
+      if (!closest || minDist > 150) {
+        setDragMsg("Drop near a node to attach");
+        setTimeout(() => setDragMsg(""), 2000);
+        return;
+      }
+
+      const newTree = cloneTree(treeRoot);
+      const newItem = {
+        ...droppedItem,
+        UniqueID: droppedItem.UniqueID + "-" + Date.now(),
+      };
+      addNodeToParent(newTree, closest.id, newItem);
+
+      setTreeRoot(newTree);
+      const rebuilt = buildFlowData(newTree, onInfoClick);
+      setNodes(rebuilt.nodes);
+      setEdges(rebuilt.edges);
+      const targetHeader = (closest.data.item as Types).header;
+      setDragMsg(`Added "${newItem.header}" under "${targetHeader}"`);
+      setTimeout(() => setDragMsg(""), 3000);
+    },
+    [getNodes, screenToFlowPosition, treeRoot, onInfoClick, setNodes, setEdges],
   );
 
   return (
@@ -306,6 +552,8 @@ function TemplateFlowInner({ root }: { root: Types }) {
             onConnect={onConnect}
             onNodeClick={onNodeClick}
             onNodeDragStop={onNodeDragStop}
+            onDragOver={onDragOver}
+            onDrop={onDrop}
             nodeTypes={nodeTypes}
             fitView
             snapToGrid
@@ -321,6 +569,9 @@ function TemplateFlowInner({ root }: { root: Types }) {
                 </Text>
                 <div className={styles.dragHint}>
                   Drag a node onto another to reparent
+                </div>
+                <div className={styles.dragHint}>
+                  Drag palette items into the flow
                 </div>
                 {dragMsg && (
                   <div
@@ -339,97 +590,159 @@ function TemplateFlowInner({ root }: { root: Types }) {
           </ReactFlow>
         </div>
 
+        {/* Right panel — draggable palette */}
         <div className={styles.detailPanel}>
-          {selectedNode ? (
-            <NodeDetails item={selectedNode} />
-          ) : (
-            <Text size={300} style={{ color: "#888" }}>
-              Click a node to view details
-            </Text>
-          )}
+          <Label weight="semibold" size="large">
+            Object Palette
+          </Label>
+          <Text size={200} style={{ color: "#666", marginBottom: 12 }}>
+            Drag items into the flow
+          </Text>
+          {PALETTE.map((obj) => (
+            <div
+              key={obj.UniqueID}
+              draggable
+              onDragStart={(e) => {
+                e.dataTransfer.setData("application/json", JSON.stringify(obj));
+                e.dataTransfer.effectAllowed = "move";
+              }}
+              className={styles.paletteItem}
+            >
+              <div style={{ fontWeight: 600 }}>{obj.header}</div>
+              <div style={{ fontSize: 11, color: "#888" }}>
+                {obj.inputType}
+                {obj.choices.length > 0 && ` • ${obj.choices.length} options`}
+              </div>
+            </div>
+          ))}
         </div>
       </div>
+
+      {/* Detail modal */}
+      {detailItem && (
+        <div
+          style={{
+            position: "fixed",
+            top: 0,
+            left: 0,
+            right: 0,
+            bottom: 0,
+            background: "rgba(0,0,0,0.4)",
+            zIndex: 1000,
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "center",
+          }}
+          onClick={() => setDetailItem(null)}
+        >
+          <div
+            style={{
+              background: "#fff",
+              borderRadius: 8,
+              padding: 24,
+              width: 420,
+              maxHeight: "80vh",
+              overflowY: "auto",
+              boxShadow: "0 8px 32px rgba(0,0,0,0.2)",
+            }}
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div
+              style={{
+                display: "flex",
+                justifyContent: "space-between",
+                alignItems: "center",
+                marginBottom: 16,
+              }}
+            >
+              <Label weight="semibold" size="large">
+                {detailItem.header || "Untitled"}
+              </Label>
+              <button
+                onClick={() => setDetailItem(null)}
+                style={{
+                  background: "none",
+                  border: "none",
+                  cursor: "pointer",
+                  fontSize: 20,
+                  color: "#666",
+                  lineHeight: 1,
+                }}
+              >
+                ×
+              </button>
+            </div>
+            <NodeDetails item={detailItem} />
+          </div>
+        </div>
+      )}
     </div>
   );
 }
 
 /* ------------------------------------------------------------------ */
-/*  Detail side-panel                                                  */
+/*  Detail renderer (used in modal)                                   */
 /* ------------------------------------------------------------------ */
 function NodeDetails({ item }: { item: Types }) {
   const styles = useStyles();
   return (
-    <Card>
-      <CardHeader
-        header={
-          <Label weight="semibold" size="large">
-            {item.header || "Untitled"}
+    <div>
+      <DetailField label="ID" value={item.id} />
+      <DetailField label="UniqueID" value={item.UniqueID} />
+      <DetailField label="Type" value={item.type} />
+      <DetailField label="Node Type" value={item.node_type} />
+      <DetailField label="Input Type" value={item.inputType} />
+      <DetailField label="Prompt" value={item.prompt} />
+      <DetailField label="Has Input" value={item.hasInput ? "Yes" : "No"} />
+      <DetailField label="Display" value={item.display ? "Yes" : "No"} />
+      <DetailField label="Order" value={item.order ?? "—"} />
+      <DetailField label="Deleted" value={item.isDeleted2 ? "Yes" : "No"} />
+
+      {item.choices?.length > 0 && (
+        <div className={styles.fieldRow}>
+          <Label size="small" weight="semibold">
+            Choices
           </Label>
-        }
-        description={
-          <Text size={200} style={{ color: "#666" }}>
-            {item.description || "No description"}
-          </Text>
-        }
-      />
-      <div style={{ marginTop: "12px" }}>
-        <DetailField label="ID" value={item.id} />
-        <DetailField label="UniqueID" value={item.UniqueID} />
-        <DetailField label="Type" value={item.type} />
-        <DetailField label="Node Type" value={item.node_type} />
-        <DetailField label="Input Type" value={item.inputType} />
-        <DetailField label="Prompt" value={item.prompt} />
-        <DetailField label="Has Input" value={item.hasInput ? "Yes" : "No"} />
-        <DetailField label="Display" value={item.display ? "Yes" : "No"} />
-        <DetailField label="Order" value={item.order ?? "—"} />
-        <DetailField label="Deleted" value={item.isDeleted2 ? "Yes" : "No"} />
-
-        {item.choices?.length > 0 && (
-          <div className={styles.fieldRow}>
-            <Label size="small" weight="semibold">
-              Choices
-            </Label>
-            <div style={{ marginTop: "4px" }}>
-              {item.choices.map((c) => (
-                <span key={c} className={styles.chip}>
-                  {c}
-                </span>
-              ))}
-            </div>
+          <div style={{ marginTop: "4px" }}>
+            {item.choices.map((c) => (
+              <span key={c} className={styles.chip}>
+                {c}
+              </span>
+            ))}
           </div>
-        )}
+        </div>
+      )}
 
-        {item.children?.length > 0 && (
-          <div className={styles.fieldRow}>
-            <Label size="small" weight="semibold">
-              Children
-            </Label>
-            <div style={{ marginTop: "4px" }}>
-              {item.children.map((child) => (
-                <span key={child.UniqueID} className={styles.chip}>
-                  {child.header}
-                </span>
-              ))}
-            </div>
+      {item.children?.length > 0 && (
+        <div className={styles.fieldRow}>
+          <Label size="small" weight="semibold">
+            Children
+          </Label>
+          <div style={{ marginTop: "4px" }}>
+            {item.children.map((child) => (
+              <span key={child.UniqueID} className={styles.chip}>
+                {child.header}
+              </span>
+            ))}
           </div>
-        )}
+        </div>
+      )}
 
-        {item.Tag && item.Tag.length > 0 && (
-          <div className={styles.fieldRow}>
-            <Label size="small" weight="semibold">
-              Tags
-            </Label>
-            <div style={{ marginTop: "4px" }}>
-              {item.Tag?.map((t) => (
-                <span key={t.id} className={styles.chip}>
-                  {t.NAME}
-                </span>
-              ))}
-            </div>
+      {item.Tag && item.Tag.length > 0 && (
+        <div className={styles.fieldRow}>
+          <Label size="small" weight="semibold">
+            Tags
+          </Label>
+          <div style={{ marginTop: "4px" }}>
+            {item.Tag?.map((t) => (
+              <span key={t.id} className={styles.chip}>
+                {t.NAME}
+              </span>
+            ))}
           </div>
-        )}
-      </div>
-    </Card>
+        </div>
+      )}
+    </div>
   );
 }
 
