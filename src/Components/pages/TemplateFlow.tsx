@@ -2,7 +2,7 @@
  * @file React Flow visualizer for nested template objects
  *  - Shows parent/child edges
  *  - Info icon on each node → detail modal
- *  - Right panel = draggable object palette
+ *  - Right panel = grouped + searchable draggable object palette
  *  - Drag palette item onto a node → adds as child
  *  - Drag node onto another node → reparent
  */
@@ -26,13 +26,8 @@ import {
 } from "@xyflow/react";
 import "@xyflow/react/dist/style.css";
 import { Types, Type } from "./TemplateTypes";
-import {
-  Card,
-  CardHeader,
-  Label,
-  makeStyles,
-  Text,
-} from "@fluentui/react-components";
+import { Label, makeStyles, Text, Input } from "@fluentui/react-components";
+import { SearchRegular } from "@fluentui/react-icons";
 
 const useStyles = makeStyles({
   flowContainer: {
@@ -43,12 +38,14 @@ const useStyles = makeStyles({
     background: "#fafafa",
   },
   detailPanel: {
-    width: "280px",
+    width: "300px",
     padding: "16px",
     background: "#fff",
     borderLeft: "1px solid #e0e0e0",
     overflowY: "auto" as const,
     height: "600px",
+    display: "flex",
+    flexDirection: "column",
   },
   wrapper: {
     display: "flex",
@@ -56,11 +53,11 @@ const useStyles = makeStyles({
     marginTop: "16px",
   },
   fieldRow: {
-    marginBottom: "8px",
+    marginBottom: "10px",
   },
   chip: {
     display: "inline-block",
-    padding: "2px 8px",
+    padding: "3px 10px",
     borderRadius: "12px",
     background: "#e3f2fd",
     color: "#1565c0",
@@ -73,160 +70,226 @@ const useStyles = makeStyles({
     color: "#666",
     marginTop: "4px",
   },
+  paletteGroup: {
+    marginBottom: "16px",
+  },
+  paletteGroupTitle: {
+    fontSize: "12px",
+    fontWeight: 700,
+    color: "#555",
+    textTransform: "uppercase" as const,
+    letterSpacing: "0.5px",
+    marginBottom: "8px",
+    paddingBottom: "4px",
+    borderBottom: "2px solid #e0e0e0",
+  },
   paletteItem: {
     padding: "10px 12px",
-    marginBottom: "8px",
+    marginBottom: "6px",
     borderRadius: "6px",
     border: "1px solid #e0e0e0",
     background: "#fff",
     cursor: "grab",
     fontSize: "13px",
-    transition: "box-shadow 0.15s",
-    ":hover": {
-      boxShadow: "0 2px 6px rgba(0,0,0,0.1)",
-    },
+    transition: "all 0.15s ease",
+  },
+  searchBox: {
+    marginBottom: "12px",
+  },
+  noResults: {
+    fontSize: "13px",
+    color: "#888",
+    textAlign: "center" as const,
+    padding: "12px 0",
   },
 });
 
 /* ------------------------------------------------------------------ */
-/*  Palette objects that can be dragged into the flow                 */
+/*  Palette objects grouped by category                               */
 /* ------------------------------------------------------------------ */
-const PALETTE: Types[] = [
+interface PaletteGroup {
+  title: string;
+  color: string;
+  items: Types[];
+}
+
+const PALETTE_GROUPS: PaletteGroup[] = [
   {
-    UniqueID: "palette-text",
-    display: true,
-    description: "Single line text input",
-    type: Type.RequirementObject,
-    UPDATED_ON: new Date(),
-    sponsoring_customer: "",
-    node_type: Type.RequirementObject,
-    isDeleted2: false,
-    header: "Text Field",
-    inputType: "textbox",
-    id: -1,
-    choices: [],
-    hasInput: true,
-    prompt: "Enter value",
-    children: [],
+    title: "Text Inputs",
+    color: "#4caf50",
+    items: [
+      {
+        UniqueID: "palette-text",
+        display: true,
+        description: "Single line text input",
+        type: Type.RequirementObject,
+        UPDATED_ON: new Date(),
+        sponsoring_customer: "",
+        node_type: Type.RequirementObject,
+        isDeleted2: false,
+        header: "Text Field",
+        inputType: "textbox",
+        id: -1,
+        choices: [],
+        hasInput: true,
+        prompt: "Enter value",
+        children: [],
+      },
+      {
+        UniqueID: "palette-textarea",
+        display: true,
+        description: "Multi-line text input",
+        type: Type.RequirementObject,
+        UPDATED_ON: new Date(),
+        sponsoring_customer: "",
+        node_type: Type.RequirementObject,
+        isDeleted2: false,
+        header: "Text Area",
+        inputType: "textarea",
+        id: -2,
+        choices: [],
+        hasInput: true,
+        prompt: "Enter detailed text",
+        children: [],
+      },
+    ],
   },
   {
-    UniqueID: "palette-textarea",
-    display: true,
-    description: "Multi-line text input",
-    type: Type.RequirementObject,
-    UPDATED_ON: new Date(),
-    sponsoring_customer: "",
-    node_type: Type.RequirementObject,
-    isDeleted2: false,
-    header: "Text Area",
-    inputType: "textarea",
-    id: -2,
-    choices: [],
-    hasInput: true,
-    prompt: "Enter detailed text",
-    children: [],
+    title: "Selection",
+    color: "#ff9800",
+    items: [
+      {
+        UniqueID: "palette-select",
+        display: true,
+        description: "Single select dropdown",
+        type: Type.RequirementObject,
+        UPDATED_ON: new Date(),
+        sponsoring_customer: "",
+        node_type: Type.RequirementObject,
+        isDeleted2: false,
+        header: "Select Dropdown",
+        inputType: "select",
+        id: -3,
+        choices: ["Option A", "Option B", "Option C"],
+        hasInput: true,
+        prompt: "Select an option",
+        children: [],
+      },
+      {
+        UniqueID: "palette-multiselect",
+        display: true,
+        description: "Multiple selection dropdown",
+        type: Type.RequirementObject,
+        UPDATED_ON: new Date(),
+        sponsoring_customer: "",
+        node_type: Type.RequirementObject,
+        isDeleted2: false,
+        header: "Multi Select",
+        inputType: "multiselect",
+        id: -4,
+        choices: ["Choice 1", "Choice 2", "Choice 3"],
+        hasInput: true,
+        prompt: "Select multiple options",
+        children: [],
+      },
+      {
+        UniqueID: "palette-autocomplete",
+        display: true,
+        description: "Auto-complete name search",
+        type: Type.RequirementObject,
+        UPDATED_ON: new Date(),
+        sponsoring_customer: "",
+        node_type: Type.RequirementObject,
+        isDeleted2: false,
+        header: "Name Autocomplete",
+        inputType: "autoComplete",
+        id: -5,
+        choices: [],
+        hasInput: true,
+        prompt: "Search for name",
+        children: [],
+      },
+    ],
   },
   {
-    UniqueID: "palette-select",
-    display: true,
-    description: "Single select dropdown",
-    type: Type.RequirementObject,
-    UPDATED_ON: new Date(),
-    sponsoring_customer: "",
-    node_type: Type.RequirementObject,
-    isDeleted2: false,
-    header: "Select Dropdown",
-    inputType: "select",
-    id: -3,
-    choices: ["Option A", "Option B", "Option C"],
-    hasInput: true,
-    prompt: "Select an option",
-    children: [],
+    title: "Numeric & Date",
+    color: "#2196f3",
+    items: [
+      {
+        UniqueID: "palette-date",
+        display: true,
+        description: "Date selection field",
+        type: Type.RequirementObject,
+        UPDATED_ON: new Date(),
+        sponsoring_customer: "",
+        node_type: Type.RequirementObject,
+        isDeleted2: false,
+        header: "Date Picker",
+        inputType: "date",
+        id: -6,
+        choices: [],
+        hasInput: true,
+        prompt: "Pick a date",
+        children: [],
+      },
+      {
+        UniqueID: "palette-number",
+        display: true,
+        description: "Numeric input field",
+        type: Type.RequirementObject,
+        UPDATED_ON: new Date(),
+        sponsoring_customer: "",
+        node_type: Type.RequirementObject,
+        isDeleted2: false,
+        header: "Number Field",
+        inputType: "number",
+        id: -7,
+        choices: [],
+        hasInput: true,
+        prompt: "Enter a number",
+        children: [],
+      },
+    ],
   },
   {
-    UniqueID: "palette-multiselect",
-    display: true,
-    description: "Multiple selection dropdown",
-    type: Type.RequirementObject,
-    UPDATED_ON: new Date(),
-    sponsoring_customer: "",
-    node_type: Type.RequirementObject,
-    isDeleted2: false,
-    header: "Multi Select",
-    inputType: "multiselect",
-    id: -4,
-    choices: ["Choice 1", "Choice 2", "Choice 3"],
-    hasInput: true,
-    prompt: "Select multiple options",
-    children: [],
-  },
-  {
-    UniqueID: "palette-date",
-    display: true,
-    description: "Date selection field",
-    type: Type.RequirementObject,
-    UPDATED_ON: new Date(),
-    sponsoring_customer: "",
-    node_type: Type.RequirementObject,
-    isDeleted2: false,
-    header: "Date Picker",
-    inputType: "date",
-    id: -5,
-    choices: [],
-    hasInput: true,
-    prompt: "Pick a date",
-    children: [],
-  },
-  {
-    UniqueID: "palette-number",
-    display: true,
-    description: "Numeric input field",
-    type: Type.RequirementObject,
-    UPDATED_ON: new Date(),
-    sponsoring_customer: "",
-    node_type: Type.RequirementObject,
-    isDeleted2: false,
-    header: "Number Field",
-    inputType: "number",
-    id: -6,
-    choices: [],
-    hasInput: true,
-    prompt: "Enter a number",
-    children: [],
-  },
-  {
-    UniqueID: "palette-attachment",
-    display: true,
-    description: "File attachment input",
-    type: Type.RequirementObject,
-    UPDATED_ON: new Date(),
-    sponsoring_customer: "",
-    node_type: Type.RequirementObject,
-    isDeleted2: false,
-    header: "Attachment",
-    inputType: "attachments",
-    id: -7,
-    choices: [],
-    hasInput: true,
-    prompt: "Upload files",
-    children: [],
-  },
-  {
-    UniqueID: "palette-section",
-    display: true,
-    description: "Group related fields",
-    type: Type.RequirementObject,
-    UPDATED_ON: new Date(),
-    sponsoring_customer: "",
-    node_type: Type.RequirementObject,
-    isDeleted2: false,
-    header: "Section Divider",
-    inputType: "section",
-    id: -8,
-    choices: [],
-    hasInput: false,
-    prompt: "Section header",
-    children: [],
+    title: "Special",
+    color: "#9c27b0",
+    items: [
+      {
+        UniqueID: "palette-attachment",
+        display: true,
+        description: "File attachment input",
+        type: Type.RequirementObject,
+        UPDATED_ON: new Date(),
+        sponsoring_customer: "",
+        node_type: Type.RequirementObject,
+        isDeleted2: false,
+        header: "Attachment",
+        inputType: "attachments",
+        id: -8,
+        choices: [],
+        hasInput: true,
+        prompt: "Upload files",
+        children: [],
+      },
+      {
+        UniqueID: "palette-section",
+        display: true,
+        description: "Group related fields",
+        type: Type.RequirementObject,
+        UPDATED_ON: new Date(),
+        sponsoring_customer: "",
+        node_type: Type.RequirementObject,
+        isDeleted2: false,
+        header: "Section Divider",
+        inputType: "section",
+        id: -9,
+        choices: [],
+        hasInput: false,
+        prompt: "Section header",
+        children: [],
+      },
+    ],
   },
 ];
 
@@ -318,17 +381,35 @@ const TemplateNode = ({ data, selected }: any) => {
   const item: Types = data.item;
   const onInfo = data.onInfoClick as (item: Types) => void;
 
+  const inputTypeColors: Record<string, string> = {
+    textbox: "#4caf50",
+    textarea: "#4caf50",
+    select: "#ff9800",
+    multiselect: "#ff9800",
+    autoComplete: "#ff9800",
+    date: "#2196f3",
+    number: "#2196f3",
+    attachments: "#9c27b0",
+    section: "#9c27b0",
+    template: "#1976d2",
+  };
+
+  const accentColor = inputTypeColors[item.inputType] || "#666";
+
   return (
     <div
       style={{
         padding: "10px 28px 10px 14px",
         borderRadius: "8px",
         background: selected ? "#e3f2fd" : "#fff",
-        border: selected ? "2px solid #1976d2" : "1px solid #ccc",
+        border: selected
+          ? `2px solid ${accentColor}`
+          : `1px solid ${accentColor}40`,
         minWidth: "160px",
         boxShadow: "0 2px 4px rgba(0,0,0,0.08)",
         cursor: "grab",
         position: "relative",
+        borderLeft: `4px solid ${accentColor}`,
       }}
     >
       {/* Info icon — top-right */}
@@ -347,9 +428,10 @@ const TemplateNode = ({ data, selected }: any) => {
           cursor: "pointer",
           padding: "2px 5px",
           borderRadius: "50%",
-          fontSize: 13,
-          color: "#666",
+          fontSize: 14,
+          color: accentColor,
           lineHeight: 1,
+          fontWeight: 700,
         }}
       >
         ⓘ
@@ -359,13 +441,27 @@ const TemplateNode = ({ data, selected }: any) => {
       <Handle
         type="target"
         position={Position.Left}
-        style={{ background: "#1976d2", width: 8, height: 8 }}
+        style={{ background: accentColor, width: 8, height: 8 }}
       />
 
-      <div style={{ fontWeight: 600, fontSize: "13px", marginBottom: "4px" }}>
+      <div
+        style={{
+          fontWeight: 600,
+          fontSize: "13px",
+          marginBottom: "4px",
+          color: "#222",
+        }}
+      >
         {item.header || "Untitled"}
       </div>
-      <div style={{ fontSize: "11px", color: "#666" }}>
+      <div
+        style={{
+          fontSize: "11px",
+          color: accentColor,
+          fontWeight: 600,
+          textTransform: "uppercase",
+        }}
+      >
         {item.inputType || item.node_type}
       </div>
       {item.children?.length > 0 && (
@@ -378,7 +474,7 @@ const TemplateNode = ({ data, selected }: any) => {
       <Handle
         type="source"
         position={Position.Right}
-        style={{ background: "#1976d2", width: 8, height: 8 }}
+        style={{ background: accentColor, width: 8, height: 8 }}
       />
     </div>
   );
@@ -405,6 +501,7 @@ function TemplateFlowInner({ root }: { root: Types }) {
   const [detailItem, setDetailItem] = useState<Types | null>(null);
   const [treeRoot, setTreeRoot] = useState<Types>(root);
   const [dragMsg, setDragMsg] = useState<string>("");
+  const [searchQuery, setSearchQuery] = useState("");
   const flowRef = useRef<HTMLDivElement>(null);
 
   const onInfoClick = useCallback((item: Types) => {
@@ -426,7 +523,6 @@ function TemplateFlowInner({ root }: { root: Types }) {
   );
 
   const onNodeClick = useCallback((_: any, node: Node) => {
-    // Node selection no longer shows detail panel — info icon does that
     void node;
   }, []);
 
@@ -540,6 +636,21 @@ function TemplateFlowInner({ root }: { root: Types }) {
     [getNodes, screenToFlowPosition, treeRoot, onInfoClick, setNodes, setEdges],
   );
 
+  /* ---- Filter palette by search ---------------------------------- */
+  const filteredGroups = useMemo(() => {
+    const q = searchQuery.toLowerCase().trim();
+    if (!q) return PALETTE_GROUPS;
+    return PALETTE_GROUPS.map((g) => ({
+      ...g,
+      items: g.items.filter(
+        (item) =>
+          item.header.toLowerCase().includes(q) ||
+          item.inputType.toLowerCase().includes(q) ||
+          item.description?.toLowerCase().includes(q),
+      ),
+    })).filter((g) => g.items.length > 0);
+  }, [searchQuery]);
+
   return (
     <div>
       <div className={styles.wrapper}>
@@ -590,29 +701,62 @@ function TemplateFlowInner({ root }: { root: Types }) {
           </ReactFlow>
         </div>
 
-        {/* Right panel — draggable palette */}
+        {/* Right panel — grouped + searchable palette */}
         <div className={styles.detailPanel}>
-          <Label weight="semibold" size="large">
+          <Label weight="semibold" size="large" style={{ marginBottom: 4 }}>
             Object Palette
           </Label>
           <Text size={200} style={{ color: "#666", marginBottom: 12 }}>
             Drag items into the flow
           </Text>
-          {PALETTE.map((obj) => (
-            <div
-              key={obj.UniqueID}
-              draggable
-              onDragStart={(e) => {
-                e.dataTransfer.setData("application/json", JSON.stringify(obj));
-                e.dataTransfer.effectAllowed = "move";
-              }}
-              className={styles.paletteItem}
-            >
-              <div style={{ fontWeight: 600 }}>{obj.header}</div>
-              <div style={{ fontSize: 11, color: "#888" }}>
-                {obj.inputType}
-                {obj.choices.length > 0 && ` • ${obj.choices.length} options`}
+
+          <div className={styles.searchBox}>
+            <Input
+              placeholder="Search objects..."
+              value={searchQuery}
+              onChange={(e: any) => setSearchQuery(e.target.value)}
+              contentBefore={
+                <SearchRegular style={{ fontSize: 14, color: "#888" }} />
+              }
+              style={{ width: "100%" }}
+            />
+          </div>
+
+          {filteredGroups.length === 0 && (
+            <div className={styles.noResults}>No matching objects</div>
+          )}
+
+          {filteredGroups.map((group) => (
+            <div key={group.title} className={styles.paletteGroup}>
+              <div
+                className={styles.paletteGroupTitle}
+                style={{ borderBottomColor: group.color }}
+              >
+                <span style={{ color: group.color }}>●</span> {group.title}
               </div>
+              {group.items.map((obj) => (
+                <div
+                  key={obj.UniqueID}
+                  draggable
+                  onDragStart={(e) => {
+                    e.dataTransfer.setData(
+                      "application/json",
+                      JSON.stringify(obj),
+                    );
+                    e.dataTransfer.effectAllowed = "move";
+                  }}
+                  className={styles.paletteItem}
+                >
+                  <div style={{ fontWeight: 600, color: "#222" }}>
+                    {obj.header}
+                  </div>
+                  <div style={{ fontSize: 11, color: "#888", marginTop: 2 }}>
+                    {obj.inputType}
+                    {obj.choices.length > 0 &&
+                      ` • ${obj.choices.length} options`}
+                  </div>
+                </div>
+              ))}
             </div>
           ))}
         </div>
@@ -627,52 +771,86 @@ function TemplateFlowInner({ root }: { root: Types }) {
             left: 0,
             right: 0,
             bottom: 0,
-            background: "rgba(0,0,0,0.4)",
+            background: "rgba(0,0,0,0.5)",
             zIndex: 1000,
             display: "flex",
             alignItems: "center",
             justifyContent: "center",
+            backdropFilter: "blur(3px)",
           }}
           onClick={() => setDetailItem(null)}
         >
           <div
             style={{
               background: "#fff",
-              borderRadius: 8,
-              padding: 24,
-              width: 420,
-              maxHeight: "80vh",
+              borderRadius: 12,
+              padding: 0,
+              width: 460,
+              maxHeight: "85vh",
               overflowY: "auto",
-              boxShadow: "0 8px 32px rgba(0,0,0,0.2)",
+              boxShadow: "0 12px 40px rgba(0,0,0,0.25)",
+              animation: "fadeIn 0.2s ease-out",
             }}
             onClick={(e) => e.stopPropagation()}
           >
+            {/* Modal Header */}
             <div
               style={{
+                padding: "20px 24px",
+                borderBottom: "1px solid #eee",
+                background: "linear-gradient(135deg, #1976d2, #1565c0)",
+                borderRadius: "12px 12px 0 0",
                 display: "flex",
                 justifyContent: "space-between",
                 alignItems: "center",
-                marginBottom: 16,
               }}
             >
-              <Label weight="semibold" size="large">
-                {detailItem.header || "Untitled"}
-              </Label>
+              <div>
+                <div
+                  style={{
+                    fontWeight: 700,
+                    fontSize: 18,
+                    color: "#fff",
+                  }}
+                >
+                  {detailItem.header || "Untitled"}
+                </div>
+                <div
+                  style={{
+                    fontSize: 12,
+                    color: "rgba(255,255,255,0.8)",
+                    marginTop: 2,
+                  }}
+                >
+                  {detailItem.inputType || detailItem.node_type} • ID:{" "}
+                  {detailItem.id}
+                </div>
+              </div>
               <button
                 onClick={() => setDetailItem(null)}
                 style={{
-                  background: "none",
+                  background: "rgba(255,255,255,0.2)",
                   border: "none",
                   cursor: "pointer",
                   fontSize: 20,
-                  color: "#666",
+                  color: "#fff",
                   lineHeight: 1,
+                  width: 32,
+                  height: 32,
+                  borderRadius: "50%",
+                  display: "flex",
+                  alignItems: "center",
+                  justifyContent: "center",
                 }}
               >
                 ×
               </button>
             </div>
-            <NodeDetails item={detailItem} />
+
+            {/* Modal Body */}
+            <div style={{ padding: "20px 24px" }}>
+              <NodeDetails item={detailItem} />
+            </div>
           </div>
         </div>
       )}
@@ -685,77 +863,196 @@ function TemplateFlowInner({ root }: { root: Types }) {
 /* ------------------------------------------------------------------ */
 function NodeDetails({ item }: { item: Types }) {
   const styles = useStyles();
+
+  const typeColorMap: Record<string, string> = {
+    textbox: "#4caf50",
+    textarea: "#4caf50",
+    select: "#ff9800",
+    multiselect: "#ff9800",
+    autoComplete: "#ff9800",
+    date: "#2196f3",
+    number: "#2196f3",
+    attachments: "#9c27b0",
+    section: "#9c27b0",
+    template: "#1976d2",
+    RequirementObject: "#e91e63",
+    Template: "#1976d2",
+  };
+
+  const accent =
+    typeColorMap[item.inputType] || typeColorMap[item.node_type] || "#666";
+
+  const Section = ({
+    title,
+    children,
+  }: {
+    title: string;
+    children: React.ReactNode;
+  }) => (
+    <div style={{ marginBottom: 16 }}>
+      <div
+        style={{
+          fontSize: 11,
+          fontWeight: 700,
+          textTransform: "uppercase" as const,
+          letterSpacing: "0.6px",
+          color: accent,
+          marginBottom: 8,
+          paddingBottom: 4,
+          borderBottom: `2px solid ${accent}30`,
+        }}
+      >
+        {title}
+      </div>
+      {children}
+    </div>
+  );
+
+  const Row = ({
+    label,
+    value,
+    badge,
+  }: {
+    label: string;
+    value: any;
+    badge?: boolean;
+  }) => (
+    <div
+      style={{
+        display: "flex",
+        justifyContent: "space-between",
+        alignItems: "center",
+        padding: "6px 0",
+        borderBottom: "1px solid #f0f0f0",
+      }}
+    >
+      <span style={{ fontSize: 13, color: "#666", fontWeight: 500 }}>
+        {label}
+      </span>
+      {badge ? (
+        <span
+          style={{
+            fontSize: 12,
+            fontWeight: 700,
+            color: value === "Yes" || value === true ? "#2e7d32" : "#c62828",
+            background:
+              value === "Yes" || value === true ? "#e8f5e9" : "#ffebee",
+            padding: "2px 10px",
+            borderRadius: 12,
+          }}
+        >
+          {value === true ? "Yes" : value === false ? "No" : value}
+        </span>
+      ) : (
+        <span
+          style={{
+            fontSize: 13,
+            color: "#222",
+            fontWeight: 600,
+            textAlign: "right",
+          }}
+        >
+          {value ?? "—"}
+        </span>
+      )}
+    </div>
+  );
+
   return (
     <div>
-      <DetailField label="ID" value={item.id} />
-      <DetailField label="UniqueID" value={item.UniqueID} />
-      <DetailField label="Type" value={item.type} />
-      <DetailField label="Node Type" value={item.node_type} />
-      <DetailField label="Input Type" value={item.inputType} />
-      <DetailField label="Prompt" value={item.prompt} />
-      <DetailField label="Has Input" value={item.hasInput ? "Yes" : "No"} />
-      <DetailField label="Display" value={item.display ? "Yes" : "No"} />
-      <DetailField label="Order" value={item.order ?? "—"} />
-      <DetailField label="Deleted" value={item.isDeleted2 ? "Yes" : "No"} />
+      <Section title="Basic Info">
+        <Row label="Unique ID" value={item.UniqueID} />
+        <Row label="Type" value={item.type} />
+        <Row label="Node Type" value={item.node_type} />
+        <Row label="Input Type" value={item.inputType} />
+        <Row label="Order" value={item.order ?? "—"} />
+      </Section>
+
+      <Section title="Configuration">
+        <Row label="Prompt" value={item.prompt} />
+        <Row label="Description" value={item.description || "—"} />
+        <Row label="Has Input" value={item.hasInput} badge />
+        <Row label="Display" value={item.display} badge />
+        <Row label="Deleted" value={item.isDeleted2} badge />
+      </Section>
 
       {item.choices?.length > 0 && (
-        <div className={styles.fieldRow}>
-          <Label size="small" weight="semibold">
-            Choices
-          </Label>
-          <div style={{ marginTop: "4px" }}>
+        <Section title="Choices">
+          <div
+            style={{ display: "flex", flexWrap: "wrap", gap: 6, marginTop: 4 }}
+          >
             {item.choices.map((c) => (
-              <span key={c} className={styles.chip}>
+              <span
+                key={c}
+                style={{
+                  display: "inline-block",
+                  padding: "4px 12px",
+                  borderRadius: 16,
+                  background: `${accent}15`,
+                  color: accent,
+                  fontSize: 12,
+                  fontWeight: 600,
+                  border: `1px solid ${accent}40`,
+                }}
+              >
                 {c}
               </span>
             ))}
           </div>
-        </div>
+        </Section>
       )}
 
       {item.children?.length > 0 && (
-        <div className={styles.fieldRow}>
-          <Label size="small" weight="semibold">
-            Children
-          </Label>
-          <div style={{ marginTop: "4px" }}>
+        <Section title={`Children (${item.children.length})`}>
+          <div
+            style={{ display: "flex", flexWrap: "wrap", gap: 6, marginTop: 4 }}
+          >
             {item.children.map((child) => (
-              <span key={child.UniqueID} className={styles.chip}>
+              <span
+                key={child.UniqueID}
+                style={{
+                  display: "inline-block",
+                  padding: "4px 12px",
+                  borderRadius: 16,
+                  background: "#f5f5f5",
+                  color: "#444",
+                  fontSize: 12,
+                  fontWeight: 600,
+                  border: "1px solid #e0e0e0",
+                }}
+              >
                 {child.header}
               </span>
             ))}
           </div>
-        </div>
+        </Section>
       )}
 
       {item.Tag && item.Tag.length > 0 && (
-        <div className={styles.fieldRow}>
-          <Label size="small" weight="semibold">
-            Tags
-          </Label>
-          <div style={{ marginTop: "4px" }}>
-            {item.Tag?.map((t) => (
-              <span key={t.id} className={styles.chip}>
+        <Section title="Tags">
+          <div
+            style={{ display: "flex", flexWrap: "wrap", gap: 6, marginTop: 4 }}
+          >
+            {item.Tag.map((t) => (
+              <span
+                key={t.id}
+                style={{
+                  display: "inline-block",
+                  padding: "4px 12px",
+                  borderRadius: 16,
+                  background: "#fff3e0",
+                  color: "#e65100",
+                  fontSize: 12,
+                  fontWeight: 600,
+                  border: "1px solid #ffcc80",
+                }}
+              >
                 {t.NAME}
               </span>
             ))}
           </div>
-        </div>
+        </Section>
       )}
-    </div>
-  );
-}
-
-function DetailField({ label, value }: { label: string; value: any }) {
-  const styles = useStyles();
-  return (
-    <div className={styles.fieldRow}>
-      <Label size="small" weight="semibold">
-        {label}
-      </Label>
-      <div>
-        <Text size={200}>{value ?? "—"}</Text>
-      </div>
     </div>
   );
 }
