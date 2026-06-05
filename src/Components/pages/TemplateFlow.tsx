@@ -771,6 +771,9 @@ function TemplateFlowInner({
               marginBottom: 10,
               borderBottom: "1px solid #e0e0e0",
               paddingBottom: 6,
+              overflowX: "auto" as const,
+              flexWrap: "nowrap" as const,
+              whiteSpace: "nowrap" as const,
             }}
           >
             {filteredGroups.map((group) => (
@@ -800,7 +803,7 @@ function TemplateFlowInner({
           )}
 
           {activeGroup && (
-            <div style={{ overflowY: "auto", flex: 1 }}>
+            <div style={{ overflowY: "auto", flex: 1, minHeight: 0 }}>
               {activeGroup.items.map((obj) => (
                 <div
                   key={obj.UniqueID}
