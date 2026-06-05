@@ -4,6 +4,7 @@ import Sidebar from "./Components/Layout/Sidebar";
 import { AddSow } from "./Components/pages/AddSow";
 import { Configuration } from "./Components/pages/Configuration";
 import { RequirementObject } from "./Components/pages/Requirementobject";
+import { AddElements } from "./Components/pages/AddElements";
 
 function App() {
   return (
@@ -26,6 +27,7 @@ function App() {
             <Route path="/page/:screenname/:id?" component={AddSow} />
             <Route path="/requirements" component={RequirementObject} />
             <Route path="/templates" component={Configuration} />
+            <Route path="/add-elements" component={AddElements} />
           </Switch>
         </Box>
       </Box>

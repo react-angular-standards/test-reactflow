@@ -31,6 +31,7 @@
     "@types/react-router-dom": "^5.3.3",
     "@types/uuid": "^10.0.0",
     "@types/xlsx": "^0.0.36",
+    "@xyflow/react": "^12.11.0",
     "date-fns": "^2.30.0",
     "file-saver": "^2.0.5",
     "jspdf": "^2.5.2",

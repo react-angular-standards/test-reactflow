@@ -18,6 +18,7 @@ import {
   Description as DescriptionIcon,
   ListAlt as ListAltIcon,
   Assignment as AssignmentIcon,
+  AddCircle as AddCircleIcon,
 } from "@mui/icons-material";
 import { NavLink, useLocation } from "react-router-dom";
 
@@ -27,6 +28,7 @@ const navItems = [
   { label: "SOWs", path: "/", icon: <DescriptionIcon /> },
   { label: "Requirements", path: "/requirements", icon: <ListAltIcon /> },
   { label: "Templates", path: "/templates", icon: <AssignmentIcon /> },
+  { label: "Add Elements", path: "/add-elements", icon: <AddCircleIcon /> },
 ];
 
 export default function Sidebar() {
