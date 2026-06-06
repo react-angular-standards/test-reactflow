@@ -204,18 +204,8 @@ export const AddElements = (): JSX.Element => {
 
   const save_template = () => {
     setSaveButtonLoading(true);
-
-    // If the template already has an id, use PUT to update; otherwise POST to create
-    const isUpdate = !!(templateObject as any).id;
-    const url = isUpdate
-      ? UrlConstant.MANAGE_SAVE_TEMPLATE +
-        "Template/" +
-        (templateObject as any).id
-      : UrlConstant.MANAGE_SAVE_TEMPLATE + "Template";
-    const method = isUpdate ? "put" : "post";
-
-    fetch(url, {
-      method,
+    fetch(UrlConstant.MANAGE_SAVE_TEMPLATE + "Template", {
+      method: "post",
       headers: {
         Accept: "application/json",
         "Content-Type": "application/json",
