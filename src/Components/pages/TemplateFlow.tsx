@@ -143,7 +143,8 @@ function buildFlowData(
   depth = 0,
   siblingIndex = 0,
 ): { nodes: Node[]; edges: Edge[] } {
-  const nodeId = root.UniqueID || `node-${depth}-${siblingIndex}`;
+  const nodeId =
+    root.UniqueID || `${parentId || "root"}-${depth}-${siblingIndex}`;
   const x = depth * 280 + 20;
   const y = siblingIndex * 140 + 20;
 
@@ -212,6 +213,19 @@ function addNodeToParent(root: any, parentId: string, node: any): any {
 
 function cloneTree(root: any): any {
   return JSON.parse(JSON.stringify(root));
+}
+
+function cloneTreeWithNewIds(root: any): any {
+  const cloned = JSON.parse(JSON.stringify(root));
+  const stamp = Date.now();
+  let counter = 0;
+  function walk(node: any) {
+    counter++;
+    node.UniqueID = (node.UniqueID || "item") + "-" + stamp + "-" + counter;
+    node.children?.forEach((child: any) => walk(child));
+  }
+  walk(cloned);
+  return cloned;
 }
 
 /* ------------------------------------------------------------------ */
@@ -488,15 +502,7 @@ function TemplateFlowInner({
       }
 
       const newTree = cloneTree(treeRoot);
-      const newItem = {
-        ...droppedItem,
-        UniqueID:
-          (droppedItem.UniqueID || "item") +
-          "-" +
-          Date.now() +
-          "-" +
-          Math.random().toString(36).slice(2, 7),
-      };
+      const newItem = cloneTreeWithNewIds(droppedItem);
       addNodeToParent(newTree, closest.id, newItem);
 
       setTreeRoot(newTree);
