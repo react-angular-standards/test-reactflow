@@ -3,7 +3,7 @@
  * @file Acme Detailed view
  * @author Gopinath Rajgopal
  * @copyright
- *   Company ,  and/or 
+ *   Company ,  and/or
  *     Copyright (c) 2023 The Company Company
  *     Unpublished Work - All Rights Reserved
  *   Third Party Disclosure Requires Written Approval
@@ -179,6 +179,13 @@ export const AddElements = (): JSX.Element => {
       setLoadwhilerender(false);
     }
   }, [id]);
+
+  React.useEffect(() => {
+    fetch(UrlConstant.REQUIREMENT_OBJECTS)
+      .then((res) => res.json())
+      .then((data) => setrequirementObjectList(data || []))
+      .catch(() => setrequirementObjectList([]));
+  }, []);
 
   const save_template = () => {
     setSaveButtonLoading(true);
@@ -522,6 +529,7 @@ export const AddElements = (): JSX.Element => {
                     <TemplateFlow
                       root={isEditMode ? flowTree : HARDCODED_TEMPLATE}
                       onTreeChange={handleFlowTreeChange}
+                      paletteItems={requirementObjectlist}
                     />
 
                     {/* <ReactHierarchy

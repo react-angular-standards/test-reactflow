@@ -1,6 +1,6 @@
 /**
  * @file Template Type Definitions
- * @copyright Company 
+ * @copyright Company
  */
 
 export interface Types {
@@ -11,7 +11,7 @@ export interface Types {
   UPDATED_ON: Date;
   sponsoring_customer: string;
   node_type: Type;
-  isDeleted2: boolean;
+  isDeleted: boolean;
   header: string;
   inputType: string;
   id: number;

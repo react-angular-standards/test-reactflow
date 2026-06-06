@@ -2,7 +2,7 @@
  * @file React Flow visualizer for nested template objects
  *  - Shows parent/child edges
  *  - Info icon on each node → detail modal
- *  - Right panel = grouped + searchable draggable object palette
+ *  - Right panel = tabbed + searchable draggable object palette
  *  - Drag palette item onto a node → adds as child
  *  - Drag node onto another node → reparent
  */
@@ -25,7 +25,6 @@ import {
   useReactFlow,
 } from "@xyflow/react";
 import "@xyflow/react/dist/style.css";
-import { Types, Type } from "./TemplateTypes";
 import { Label, makeStyles, Text, Input } from "@fluentui/react-components";
 import { SearchRegular } from "@fluentui/react-icons";
 
@@ -105,205 +104,41 @@ const useStyles = makeStyles({
 });
 
 /* ------------------------------------------------------------------ */
-/*  Palette objects grouped by category                               */
+/*  Category helpers                                                  */
 /* ------------------------------------------------------------------ */
-interface PaletteGroup {
-  title: string;
-  color: string;
-  items: Types[];
+function getCategory(item: any): { title: string; color: string } {
+  const t = item.inputType || item.node_type || "Other";
+  if (["textbox", "textarea"].includes(t))
+    return { title: "Text Inputs", color: "#4caf50" };
+  if (["select", "multiselect", "autoComplete"].includes(t))
+    return { title: "Selection", color: "#ff9800" };
+  if (["date", "number"].includes(t))
+    return { title: "Numeric & Date", color: "#2196f3" };
+  if (["attachments", "section"].includes(t))
+    return { title: "Special", color: "#9c27b0" };
+  return { title: t, color: "#666" };
 }
 
-const PALETTE_GROUPS: PaletteGroup[] = [
-  {
-    title: "All",
-    color: "#1976d2",
-    items: [],
-  },
-  {
-    title: "Text Inputs",
-    color: "#4caf50",
-    items: [
-      {
-        UniqueID: "palette-text",
-        display: true,
-        description: "Single line text input",
-        type: Type.RequirementObject,
-        UPDATED_ON: new Date(),
-        sponsoring_customer: "",
-        node_type: Type.RequirementObject,
-        isDeleted2: false,
-        header: "Text Field",
-        inputType: "textbox",
-        id: -1,
-        choices: [],
-        hasInput: true,
-        prompt: "Enter value",
-        children: [],
-      },
-      {
-        UniqueID: "palette-textarea",
-        display: true,
-        description: "Multi-line text input",
-        type: Type.RequirementObject,
-        UPDATED_ON: new Date(),
-        sponsoring_customer: "",
-        node_type: Type.RequirementObject,
-        isDeleted2: false,
-        header: "Text Area",
-        inputType: "textarea",
-        id: -2,
-        choices: [],
-        hasInput: true,
-        prompt: "Enter detailed text",
-        children: [],
-      },
-    ],
-  },
-  {
-    title: "Selection",
-    color: "#ff9800",
-    items: [
-      {
-        UniqueID: "palette-select",
-        display: true,
-        description: "Single select dropdown",
-        type: Type.RequirementObject,
-        UPDATED_ON: new Date(),
-        sponsoring_customer: "",
-        node_type: Type.RequirementObject,
-        isDeleted2: false,
-        header: "Select Dropdown",
-        inputType: "select",
-        id: -3,
-        choices: ["Option A", "Option B", "Option C"],
-        hasInput: true,
-        prompt: "Select an option",
-        children: [],
-      },
-      {
-        UniqueID: "palette-multiselect",
-        display: true,
-        description: "Multiple selection dropdown",
-        type: Type.RequirementObject,
-        UPDATED_ON: new Date(),
-        sponsoring_customer: "",
-        node_type: Type.RequirementObject,
-        isDeleted2: false,
-        header: "Multi Select",
-        inputType: "multiselect",
-        id: -4,
-        choices: ["Choice 1", "Choice 2", "Choice 3"],
-        hasInput: true,
-        prompt: "Select multiple options",
-        children: [],
-      },
-      {
-        UniqueID: "palette-autocomplete",
-        display: true,
-        description: "Auto-complete name search",
-        type: Type.RequirementObject,
-        UPDATED_ON: new Date(),
-        sponsoring_customer: "",
-        node_type: Type.RequirementObject,
-        isDeleted2: false,
-        header: "Name Autocomplete",
-        inputType: "autoComplete",
-        id: -5,
-        choices: [],
-        hasInput: true,
-        prompt: "Search for name",
-        children: [],
-      },
-    ],
-  },
-  {
-    title: "Numeric & Date",
-    color: "#2196f3",
-    items: [
-      {
-        UniqueID: "palette-date",
-        display: true,
-        description: "Date selection field",
-        type: Type.RequirementObject,
-        UPDATED_ON: new Date(),
-        sponsoring_customer: "",
-        node_type: Type.RequirementObject,
-        isDeleted2: false,
-        header: "Date Picker",
-        inputType: "date",
-        id: -6,
-        choices: [],
-        hasInput: true,
-        prompt: "Pick a date",
-        children: [],
-      },
-      {
-        UniqueID: "palette-number",
-        display: true,
-        description: "Numeric input field",
-        type: Type.RequirementObject,
-        UPDATED_ON: new Date(),
-        sponsoring_customer: "",
-        node_type: Type.RequirementObject,
-        isDeleted2: false,
-        header: "Number Field",
-        inputType: "number",
-        id: -7,
-        choices: [],
-        hasInput: true,
-        prompt: "Enter a number",
-        children: [],
-      },
-    ],
-  },
-  {
-    title: "Special",
-    color: "#9c27b0",
-    items: [
-      {
-        UniqueID: "palette-attachment",
-        display: true,
-        description: "File attachment input",
-        type: Type.RequirementObject,
-        UPDATED_ON: new Date(),
-        sponsoring_customer: "",
-        node_type: Type.RequirementObject,
-        isDeleted2: false,
-        header: "Attachment",
-        inputType: "attachments",
-        id: -8,
-        choices: [],
-        hasInput: true,
-        prompt: "Upload files",
-        children: [],
-      },
-      {
-        UniqueID: "palette-section",
-        display: true,
-        description: "Group related fields",
-        type: Type.RequirementObject,
-        UPDATED_ON: new Date(),
-        sponsoring_customer: "",
-        node_type: Type.RequirementObject,
-        isDeleted2: false,
-        header: "Section Divider",
-        inputType: "section",
-        id: -9,
-        choices: [],
-        hasInput: false,
-        prompt: "Section header",
-        children: [],
-      },
-    ],
-  },
-];
+function buildPaletteGroups(
+  items: any[],
+): { title: string; color: string; items: any[] }[] {
+  const map = new Map<string, { title: string; color: string; items: any[] }>();
+  for (const item of items) {
+    const cat = getCategory(item);
+    if (!map.has(cat.title)) {
+      map.set(cat.title, { title: cat.title, color: cat.color, items: [] });
+    }
+    map.get(cat.title)!.items.push(item);
+  }
+  return Array.from(map.values());
+}
 
 /* ------------------------------------------------------------------ */
-/*  Build flat nodes + edges from recursive Types tree                */
+/*  Build flat nodes + edges from recursive tree                      */
 /* ------------------------------------------------------------------ */
 function buildFlowData(
-  root: Types,
-  onInfoClick: (item: Types) => void,
+  root: any,
+  onInfoClick: (item: any) => void,
   parentId: string | null = null,
   depth = 0,
   siblingIndex = 0,
@@ -335,7 +170,7 @@ function buildFlowData(
     });
   }
 
-  root.children?.forEach((child, idx) => {
+  root.children?.forEach((child: any, idx: number) => {
     const childData = buildFlowData(child, onInfoClick, nodeId, depth + 1, idx);
     nodes.push(...childData.nodes);
     edges.push(...childData.edges);
@@ -345,9 +180,9 @@ function buildFlowData(
 }
 
 /* ------------------------------------------------------------------ */
-/*  Tree helpers for reparenting                                      */
+/*  Tree helpers                                                      */
 /* ------------------------------------------------------------------ */
-function findNodeInTree(root: Types, uniqueId: string): Types | null {
+function findNodeInTree(root: any, uniqueId: string): any | null {
   if (root.UniqueID === uniqueId) return root;
   for (const child of root.children || []) {
     const found = findNodeInTree(child, uniqueId);
@@ -356,14 +191,14 @@ function findNodeInTree(root: Types, uniqueId: string): Types | null {
   return null;
 }
 
-function removeNodeFromParent(root: Types, uniqueId: string): Types {
+function removeNodeFromParent(root: any, uniqueId: string): any {
   if (!root.children) return root;
-  root.children = root.children.filter((c) => c.UniqueID !== uniqueId);
-  root.children.forEach((c) => removeNodeFromParent(c, uniqueId));
+  root.children = root.children.filter((c: any) => c.UniqueID !== uniqueId);
+  root.children.forEach((c: any) => removeNodeFromParent(c, uniqueId));
   return root;
 }
 
-function addNodeToParent(root: Types, parentId: string, node: Types): Types {
+function addNodeToParent(root: any, parentId: string, node: any): any {
   if (root.UniqueID === parentId) {
     root.children = root.children || [];
     root.children.push(node);
@@ -375,7 +210,7 @@ function addNodeToParent(root: Types, parentId: string, node: Types): Types {
   return root;
 }
 
-function cloneTree(root: Types): Types {
+function cloneTree(root: any): any {
   return JSON.parse(JSON.stringify(root));
 }
 
@@ -383,8 +218,8 @@ function cloneTree(root: Types): Types {
 /*  Custom node with info icon + Handles                              */
 /* ------------------------------------------------------------------ */
 const TemplateNode = ({ data, selected }: any) => {
-  const item: Types = data.item;
-  const onInfo = data.onInfoClick as (item: Types) => void;
+  const item: any = data.item;
+  const onInfo = data.onInfoClick as (item: any) => void;
 
   const inputTypeColors: Record<string, string> = {
     textbox: "#4caf50",
@@ -442,7 +277,6 @@ const TemplateNode = ({ data, selected }: any) => {
         ⓘ
       </button>
 
-      {/* Target handle (left) */}
       <Handle
         type="target"
         position={Position.Left}
@@ -475,7 +309,6 @@ const TemplateNode = ({ data, selected }: any) => {
         </div>
       )}
 
-      {/* Source handle (right) */}
       <Handle
         type="source"
         position={Position.Right}
@@ -488,18 +321,24 @@ const TemplateNode = ({ data, selected }: any) => {
 const nodeTypes = { templateNode: TemplateNode };
 
 /* ------------------------------------------------------------------ */
-/*  Wrapper so useReactFlow works                                     */
+/*  Wrapper                                                           */
 /* ------------------------------------------------------------------ */
 export default function TemplateFlow({
   root,
   onTreeChange,
+  paletteItems = [],
 }: {
-  root: Types;
-  onTreeChange?: (tree: Types) => void;
+  root: any;
+  onTreeChange?: (tree: any) => void;
+  paletteItems?: any[];
 }) {
   return (
     <ReactFlowProvider>
-      <TemplateFlowInner root={root} onTreeChange={onTreeChange} />
+      <TemplateFlowInner
+        root={root}
+        onTreeChange={onTreeChange}
+        paletteItems={paletteItems}
+      />
     </ReactFlowProvider>
   );
 }
@@ -510,18 +349,25 @@ export default function TemplateFlow({
 function TemplateFlowInner({
   root,
   onTreeChange,
+  paletteItems,
 }: {
-  root: Types;
-  onTreeChange?: (tree: Types) => void;
+  root: any;
+  onTreeChange?: (tree: any) => void;
+  paletteItems: any[];
 }) {
   const styles = useStyles();
-  const [detailItem, setDetailItem] = useState<Types | null>(null);
-  const [treeRoot, setTreeRoot] = useState<Types>(root);
+  const [detailItem, setDetailItem] = useState<any | null>(null);
+  const [treeRoot, setTreeRoot] = useState<any>(root);
   const [dragMsg, setDragMsg] = useState<string>("");
   const [searchQuery, setSearchQuery] = useState("");
+  const [activeTab, setActiveTab] = useState<string>("All");
   const flowRef = useRef<HTMLDivElement>(null);
 
-  const onInfoClick = useCallback((item: Types) => {
+  React.useEffect(() => {
+    setTreeRoot(root);
+  }, [root]);
+
+  const onInfoClick = useCallback((item: any) => {
     setDetailItem(item);
   }, []);
 
@@ -531,6 +377,12 @@ function TemplateFlowInner({
   );
   const [nodes, setNodes, onNodesChange] = useNodesState(initial.nodes);
   const [edges, setEdges, onEdgesChange] = useEdgesState(initial.edges);
+
+  React.useEffect(() => {
+    const rebuilt = buildFlowData(treeRoot, onInfoClick);
+    setNodes(rebuilt.nodes);
+    setEdges(rebuilt.edges);
+  }, [treeRoot, onInfoClick, setNodes, setEdges]);
 
   const { getNodes, screenToFlowPosition } = useReactFlow();
 
@@ -570,9 +422,11 @@ function TemplateFlowInner({
       const draggedId = draggedNode.id;
       const targetId = closestNode.id;
 
-      const isDescendant = (parent: Types, childId: string): boolean => {
+      const isDescendant = (parent: any, childId: string): boolean => {
         if (parent.UniqueID === childId) return true;
-        return (parent.children || []).some((c) => isDescendant(c, childId));
+        return (parent.children || []).some((c: any) =>
+          isDescendant(c, childId),
+        );
       };
       const targetItem = findNodeInTree(treeRoot, targetId);
       if (targetItem && isDescendant(targetItem, draggedId)) {
@@ -590,14 +444,11 @@ function TemplateFlowInner({
 
       setTreeRoot(newTree);
       onTreeChange?.(newTree);
-      const rebuilt = buildFlowData(newTree, onInfoClick);
-      setNodes(rebuilt.nodes);
-      setEdges(rebuilt.edges);
-      const targetHeader = (closestNode.data.item as Types).header;
+      const targetHeader = (closestNode.data as any).item?.header;
       setDragMsg(`Moved "${nodeToMove.header}" under "${targetHeader}"`);
       setTimeout(() => setDragMsg(""), 3000);
     },
-    [getNodes, treeRoot, onInfoClick, setNodes, setEdges],
+    [getNodes, treeRoot, onTreeChange],
   );
 
   /* ---- Drag from palette onto canvas → add as child -------------- */
@@ -612,7 +463,7 @@ function TemplateFlowInner({
       const json = e.dataTransfer.getData("application/json");
       if (!json) return;
 
-      const droppedItem: Types = JSON.parse(json);
+      const droppedItem: any = JSON.parse(json);
       const pos = screenToFlowPosition({
         x: e.clientX,
         y: e.clientY,
@@ -639,53 +490,52 @@ function TemplateFlowInner({
       const newTree = cloneTree(treeRoot);
       const newItem = {
         ...droppedItem,
-        UniqueID: droppedItem.UniqueID + "-" + Date.now(),
+        UniqueID: (droppedItem.UniqueID || "item") + "-" + Date.now(),
       };
       addNodeToParent(newTree, closest.id, newItem);
 
       setTreeRoot(newTree);
       onTreeChange?.(newTree);
-      const rebuilt = buildFlowData(newTree, onInfoClick);
-      setNodes(rebuilt.nodes);
-      setEdges(rebuilt.edges);
-      const targetHeader = (closest.data.item as Types).header;
+      const targetHeader = (closest.data as any).item?.header;
       setDragMsg(`Added "${newItem.header}" under "${targetHeader}"`);
       setTimeout(() => setDragMsg(""), 3000);
     },
-    [getNodes, screenToFlowPosition, treeRoot, onInfoClick, setNodes, setEdges],
+    [getNodes, screenToFlowPosition, treeRoot, onTreeChange],
   );
 
-  /* ---- Tabs + search for palette -------------------------------- */
-  const [activeTab, setActiveTab] = useState<string>("All");
+  /* ---- Palette tabs ---------------------------------------------- */
+  const paletteGroups = useMemo(() => {
+    if (!paletteItems || paletteItems.length === 0) return [];
+    return buildPaletteGroups(paletteItems);
+  }, [paletteItems]);
 
   const filteredGroups = useMemo(() => {
     const q = searchQuery.toLowerCase().trim();
-    let groups = PALETTE_GROUPS;
+    let groups = paletteGroups;
     if (q) {
-      groups = PALETTE_GROUPS.map((g) => ({
-        ...g,
-        items: g.items.filter(
-          (item) =>
-            item.header.toLowerCase().includes(q) ||
-            item.inputType.toLowerCase().includes(q) ||
-            item.description?.toLowerCase().includes(q),
-        ),
-      })).filter((g) => g.items.length > 0);
+      groups = paletteGroups
+        .map((g) => ({
+          ...g,
+          items: g.items.filter(
+            (item: any) =>
+              (item.header || "").toLowerCase().includes(q) ||
+              (item.inputType || "").toLowerCase().includes(q) ||
+              (item.description || "").toLowerCase().includes(q),
+          ),
+        }))
+        .filter((g) => g.items.length > 0);
     }
     return groups;
-  }, [searchQuery]);
+  }, [paletteGroups, searchQuery]);
 
   const activeGroup = useMemo(() => {
-    // "All" tab: always merge every item from every real group
     if (activeTab === "All") {
-      const allItems = filteredGroups
-        .filter((g) => g.title !== "All")
-        .flatMap((g) => g.items);
+      const allItems = filteredGroups.flatMap((g) => g.items);
       return { title: "All", color: "#1976d2", items: allItems };
     }
-    const found = filteredGroups.find((g) => g.title === activeTab);
-    if (found) return found;
-    return filteredGroups[0];
+    return (
+      filteredGroups.find((g) => g.title === activeTab) || filteredGroups[0]
+    );
   }, [filteredGroups, activeTab]);
 
   return (
@@ -763,71 +613,95 @@ function TemplateFlowInner({
             />
           </div>
 
-          {/* Category tabs */}
-          <div
-            style={{
-              display: "flex",
-              gap: 4,
-              marginBottom: 10,
-              borderBottom: "1px solid #e0e0e0",
-              paddingBottom: 6,
-              overflowX: "auto" as const,
-              flexWrap: "nowrap" as const,
-              whiteSpace: "nowrap" as const,
-            }}
-          >
-            {filteredGroups.map((group) => (
-              <button
-                key={group.title}
-                onClick={() => setActiveTab(group.title)}
+          {paletteItems.length === 0 ? (
+            <div className={styles.noResults}>No palette items available</div>
+          ) : (
+            <>
+              {/* Category tabs */}
+              <div
                 style={{
-                  padding: "5px 12px",
-                  borderRadius: "16px",
-                  border: "none",
-                  cursor: "pointer",
-                  fontSize: 12,
-                  fontWeight: 600,
-                  background:
-                    activeTab === group.title ? group.color : "transparent",
-                  color: activeTab === group.title ? "#fff" : group.color,
-                  transition: "all 0.15s",
+                  display: "flex",
+                  gap: 4,
+                  marginBottom: 10,
+                  borderBottom: "1px solid #e0e0e0",
+                  paddingBottom: 6,
+                  overflowX: "auto" as const,
+                  flexWrap: "nowrap" as const,
+                  whiteSpace: "nowrap" as const,
                 }}
               >
-                {group.title}
-              </button>
-            ))}
-          </div>
-
-          {filteredGroups.length === 0 && (
-            <div className={styles.noResults}>No matching objects</div>
-          )}
-
-          {activeGroup && (
-            <div style={{ overflowY: "auto", flex: 1, minHeight: 0 }}>
-              {activeGroup.items.map((obj) => (
-                <div
-                  key={obj.UniqueID}
-                  draggable
-                  onDragStart={(e) => {
-                    e.dataTransfer.setData(
-                      "application/json",
-                      JSON.stringify(obj),
-                    );
-                    e.dataTransfer.effectAllowed = "move";
+                <button
+                  onClick={() => setActiveTab("All")}
+                  style={{
+                    padding: "5px 12px",
+                    borderRadius: "16px",
+                    border: "none",
+                    cursor: "pointer",
+                    fontSize: 12,
+                    fontWeight: 600,
+                    background: activeTab === "All" ? "#1976d2" : "transparent",
+                    color: activeTab === "All" ? "#fff" : "#1976d2",
+                    transition: "all 0.15s",
                   }}
-                  className={styles.paletteItem}
                 >
-                  <div style={{ fontWeight: 600, color: "#222" }}>
-                    {obj.header}
-                  </div>
-                  <div style={{ fontSize: 11, color: "#888", marginTop: 2 }}>
-                    {obj.inputType}
-                    {obj.choices.length > 0 &&
-                      ` • ${obj.choices.length} options`}
-                  </div>
+                  All
+                </button>
+                {filteredGroups.map((group) => (
+                  <button
+                    key={group.title}
+                    onClick={() => setActiveTab(group.title)}
+                    style={{
+                      padding: "5px 12px",
+                      borderRadius: "16px",
+                      border: "none",
+                      cursor: "pointer",
+                      fontSize: 12,
+                      fontWeight: 600,
+                      background:
+                        activeTab === group.title ? group.color : "transparent",
+                      color: activeTab === group.title ? "#fff" : group.color,
+                      transition: "all 0.15s",
+                    }}
+                  >
+                    {group.title}
+                  </button>
+                ))}
+              </div>
+
+              {filteredGroups.length === 0 && (
+                <div className={styles.noResults}>No matching objects</div>
+              )}
+
+              {activeGroup && (
+                <div style={{ overflowY: "auto", flex: 1, minHeight: 0 }}>
+                  {activeGroup.items.map((obj: any) => (
+                    <div
+                      key={obj.UniqueID || obj.id}
+                      draggable
+                      onDragStart={(e) => {
+                        e.dataTransfer.setData(
+                          "application/json",
+                          JSON.stringify(obj),
+                        );
+                        e.dataTransfer.effectAllowed = "move";
+                      }}
+                      className={styles.paletteItem}
+                    >
+                      <div style={{ fontWeight: 600, color: "#222" }}>
+                        {obj.header || obj.name || "Untitled"}
+                      </div>
+                      <div
+                        style={{ fontSize: 11, color: "#888", marginTop: 2 }}
+                      >
+                        {obj.inputType || obj.node_type}
+                        {obj.choices?.length > 0 &&
+                          ` • ${obj.choices.length} options`}
+                      </div>
+                    </div>
+                  ))}
                 </div>
-              ))}
-            </div>
+              )}
+            </>
           )}
         </div>
       </div>
@@ -859,11 +733,9 @@ function TemplateFlowInner({
               maxHeight: "85vh",
               overflowY: "auto",
               boxShadow: "0 12px 40px rgba(0,0,0,0.25)",
-              animation: "fadeIn 0.2s ease-out",
             }}
             onClick={(e) => e.stopPropagation()}
           >
-            {/* Modal Header */}
             <div
               style={{
                 padding: "20px 24px",
@@ -916,8 +788,6 @@ function TemplateFlowInner({
                 ×
               </button>
             </div>
-
-            {/* Modal Body */}
             <div style={{ padding: "20px 24px" }}>
               <NodeDetails item={detailItem} />
             </div>
@@ -929,11 +799,9 @@ function TemplateFlowInner({
 }
 
 /* ------------------------------------------------------------------ */
-/*  Detail renderer (used in modal)                                   */
+/*  Detail renderer                                                   */
 /* ------------------------------------------------------------------ */
-function NodeDetails({ item }: { item: Types }) {
-  const styles = useStyles();
-
+function NodeDetails({ item }: { item: any }) {
   const typeColorMap: Record<string, string> = {
     textbox: "#4caf50",
     textarea: "#4caf50",
@@ -1043,7 +911,7 @@ function NodeDetails({ item }: { item: Types }) {
         <Row label="Description" value={item.description || "—"} />
         <Row label="Has Input" value={item.hasInput} badge />
         <Row label="Display" value={item.display} badge />
-        <Row label="Deleted" value={item.isDeleted2} badge />
+        <Row label="Deleted" value={item.isDeleted} badge />
       </Section>
 
       {item.choices?.length > 0 && (
@@ -1051,7 +919,7 @@ function NodeDetails({ item }: { item: Types }) {
           <div
             style={{ display: "flex", flexWrap: "wrap", gap: 6, marginTop: 4 }}
           >
-            {item.choices.map((c) => (
+            {item.choices.map((c: string) => (
               <span
                 key={c}
                 style={{
@@ -1077,9 +945,9 @@ function NodeDetails({ item }: { item: Types }) {
           <div
             style={{ display: "flex", flexWrap: "wrap", gap: 6, marginTop: 4 }}
           >
-            {item.children.map((child) => (
+            {item.children.map((child: any) => (
               <span
-                key={child.UniqueID}
+                key={child.UniqueID || child.id}
                 style={{
                   display: "inline-block",
                   padding: "4px 12px",
@@ -1098,12 +966,12 @@ function NodeDetails({ item }: { item: Types }) {
         </Section>
       )}
 
-      {item.Tag && item.Tag.length > 0 && (
+      {item.Tag?.length > 0 && (
         <Section title="Tags">
           <div
             style={{ display: "flex", flexWrap: "wrap", gap: 6, marginTop: 4 }}
           >
-            {item.Tag.map((t) => (
+            {item.Tag.map((t: any) => (
               <span
                 key={t.id}
                 style={{

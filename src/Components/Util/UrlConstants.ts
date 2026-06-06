@@ -8,4 +8,5 @@ export const UrlConstant = {
   // json-server endpoints
   JSON_SERVER: "http://localhost:3002",
   TEMPLATES: "http://localhost:3002/templates",
+  REQUIREMENT_OBJECTS: "http://localhost:3002/requirement-objects",
 };
