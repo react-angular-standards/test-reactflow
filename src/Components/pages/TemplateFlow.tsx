@@ -2,9 +2,11 @@
  * @file React Flow visualizer for nested template objects
  *  - Shows parent/child edges
  *  - Info icon on each node → detail modal
+ *  - Delete (✕) icon on child nodes → removes from tree
  *  - Right panel = tabbed + searchable draggable object palette
  *  - Drag palette item onto a node → adds as child
  *  - Drag node onto another node → reparent
+ *  - `disabled` prop → overlay + no interaction until template is saved
  */
 import React, { useState, useCallback, useMemo, useRef } from "react";
 import {
@@ -31,25 +33,28 @@ import { SearchRegular } from "@fluentui/react-icons";
 const useStyles = makeStyles({
   flowContainer: {
     width: "100%",
-    height: "600px",
+    height: "calc(100vh - 300px)",
+    minHeight: "500px",
     border: "1px solid #e0e0e0",
     borderRadius: "8px",
     background: "#fafafa",
   },
   detailPanel: {
-    width: "300px",
-    padding: "16px",
+    width: "280px",
+    minWidth: "280px",
+    padding: "14px",
     background: "#fff",
     borderLeft: "1px solid #e0e0e0",
     overflowY: "auto" as const,
-    height: "600px",
+    height: "calc(100vh - 300px)",
+    minHeight: "500px",
     display: "flex",
     flexDirection: "column",
   },
   wrapper: {
     display: "flex",
-    gap: "16px",
-    marginTop: "16px",
+    gap: "0px",
+    marginTop: "12px",
   },
   fieldRow: {
     marginBottom: "10px",
@@ -139,6 +144,7 @@ function buildPaletteGroups(
 function buildFlowData(
   root: any,
   onInfoClick: (item: any) => void,
+  onDeleteNode: (uniqueId: string) => void,
   parentId: string | null = null,
   depth = 0,
   siblingIndex = 0,
@@ -163,7 +169,7 @@ function buildFlowData(
   const node: Node = {
     id: nodeId,
     position: { x, y },
-    data: { item: root, parentId, onInfoClick },
+    data: { item: root, parentId, onInfoClick, onDeleteNode },
     type: "templateNode",
     draggable: true,
   };
@@ -187,6 +193,7 @@ function buildFlowData(
     const childData = buildFlowData(
       child,
       onInfoClick,
+      onDeleteNode,
       nodeId,
       depth + 1,
       idx,
@@ -248,11 +255,15 @@ function cloneTreeWithNewIds(root: any): any {
 }
 
 /* ------------------------------------------------------------------ */
-/*  Custom node with info icon + Handles                              */
+/*  Custom node with info + delete icons + Handles                    */
 /* ------------------------------------------------------------------ */
 const TemplateNode = ({ data, selected }: any) => {
   const item: any = data.item;
   const onInfo = data.onInfoClick as (item: any) => void;
+  const onDelete = data.onDeleteNode as
+    | ((uniqueId: string) => void)
+    | undefined;
+  const isRoot = !data.parentId;
 
   const inputTypeColors: Record<string, string> = {
     textbox: "#4caf50",
@@ -272,7 +283,7 @@ const TemplateNode = ({ data, selected }: any) => {
   return (
     <div
       style={{
-        padding: "10px 28px 10px 14px",
+        padding: "10px 40px 10px 14px",
         borderRadius: "8px",
         background: selected ? "#e3f2fd" : "#fff",
         border: selected
@@ -285,6 +296,33 @@ const TemplateNode = ({ data, selected }: any) => {
         borderLeft: `4px solid ${accentColor}`,
       }}
     >
+      {/* Delete icon — top-right (only for non-root nodes) */}
+      {!isRoot && onDelete && (
+        <button
+          onClick={(e) => {
+            e.stopPropagation();
+            onDelete(item.UniqueID);
+          }}
+          title="Remove from template"
+          style={{
+            position: "absolute",
+            top: 4,
+            right: 22,
+            background: "none",
+            border: "none",
+            cursor: "pointer",
+            padding: "2px 5px",
+            borderRadius: "50%",
+            fontSize: 13,
+            color: "#c62828",
+            lineHeight: 1,
+            fontWeight: 700,
+          }}
+        >
+          ✕
+        </button>
+      )}
+
       {/* Info icon — top-right */}
       <button
         onClick={(e) => {
@@ -360,10 +398,12 @@ export default function TemplateFlow({
   root,
   onTreeChange,
   paletteItems = [],
+  disabled = false,
 }: {
   root: any;
   onTreeChange?: (tree: any) => void;
   paletteItems?: any[];
+  disabled?: boolean;
 }) {
   return (
     <ReactFlowProvider>
@@ -371,6 +411,7 @@ export default function TemplateFlow({
         root={root}
         onTreeChange={onTreeChange}
         paletteItems={paletteItems}
+        disabled={disabled}
       />
     </ReactFlowProvider>
   );
@@ -383,10 +424,12 @@ function TemplateFlowInner({
   root,
   onTreeChange,
   paletteItems,
+  disabled,
 }: {
   root: any;
   onTreeChange?: (tree: any) => void;
   paletteItems: any[];
+  disabled: boolean;
 }) {
   const styles = useStyles();
   const [detailItem, setDetailItem] = useState<any | null>(null);
@@ -404,18 +447,31 @@ function TemplateFlowInner({
     setDetailItem(item);
   }, []);
 
+  const onDeleteNode = useCallback(
+    (uniqueId: string) => {
+      if (disabled) return;
+      const newTree = cloneTree(treeRoot);
+      removeNodeFromParent(newTree, uniqueId);
+      setTreeRoot(newTree);
+      onTreeChange?.(newTree);
+      setDragMsg("Node removed");
+      setTimeout(() => setDragMsg(""), 2000);
+    },
+    [treeRoot, onTreeChange, disabled],
+  );
+
   const initial = useMemo(
-    () => buildFlowData(treeRoot, onInfoClick),
-    [treeRoot, onInfoClick],
+    () => buildFlowData(treeRoot, onInfoClick, onDeleteNode),
+    [treeRoot, onInfoClick, onDeleteNode],
   );
   const [nodes, setNodes, onNodesChange] = useNodesState(initial.nodes);
   const [edges, setEdges, onEdgesChange] = useEdgesState(initial.edges);
 
   React.useEffect(() => {
-    const rebuilt = buildFlowData(treeRoot, onInfoClick);
+    const rebuilt = buildFlowData(treeRoot, onInfoClick, onDeleteNode);
     setNodes(rebuilt.nodes);
     setEdges(rebuilt.edges);
-  }, [treeRoot, onInfoClick, setNodes, setEdges]);
+  }, [treeRoot, onInfoClick, onDeleteNode, setNodes, setEdges]);
 
   const { getNodes, screenToFlowPosition } = useReactFlow();
 
@@ -431,6 +487,7 @@ function TemplateFlowInner({
   /* ---- Drag a node onto another → reparent ----------------------- */
   const onNodeDragStop = useCallback(
     (_event: any, draggedNode: Node) => {
+      if (disabled) return;
       const allNodes = getNodes();
       let closestNode: Node | null = null;
       let minDist = Infinity;
@@ -481,17 +538,22 @@ function TemplateFlowInner({
       setDragMsg(`Moved "${nodeToMove.header}" under "${targetHeader}"`);
       setTimeout(() => setDragMsg(""), 3000);
     },
-    [getNodes, treeRoot, onTreeChange],
+    [getNodes, treeRoot, onTreeChange, disabled],
   );
 
   /* ---- Drag from palette onto canvas → add as child -------------- */
-  const onDragOver = useCallback((e: React.DragEvent) => {
-    e.preventDefault();
-    e.dataTransfer.dropEffect = "move";
-  }, []);
+  const onDragOver = useCallback(
+    (e: React.DragEvent) => {
+      if (disabled) return;
+      e.preventDefault();
+      e.dataTransfer.dropEffect = "move";
+    },
+    [disabled],
+  );
 
   const onDrop = useCallback(
     (e: React.DragEvent) => {
+      if (disabled) return;
       e.preventDefault();
       const json = e.dataTransfer.getData("application/json");
       if (!json) return;
@@ -530,7 +592,7 @@ function TemplateFlowInner({
       setDragMsg(`Added "${newItem.header}" under "${targetHeader}"`);
       setTimeout(() => setDragMsg(""), 3000);
     },
-    [getNodes, screenToFlowPosition, treeRoot, onTreeChange],
+    [getNodes, screenToFlowPosition, treeRoot, onTreeChange, disabled],
   );
 
   /* ---- Palette tabs ---------------------------------------------- */
@@ -571,55 +633,118 @@ function TemplateFlowInner({
   return (
     <div>
       <div className={styles.wrapper}>
-        <div className={styles.flowContainer} ref={flowRef}>
-          <ReactFlow
-            nodes={nodes}
-            edges={edges}
-            onNodesChange={onNodesChange}
-            onEdgesChange={onEdgesChange}
-            onConnect={onConnect}
-            onNodeClick={onNodeClick}
-            onNodeDragStop={onNodeDragStop}
-            onDragOver={onDragOver}
-            onDrop={onDrop}
-            nodeTypes={nodeTypes}
-            fitView
-            snapToGrid
-            snapGrid={[10, 10]}
-          >
-            <Background gap={16} />
-            <Controls />
-            <MiniMap nodeStrokeWidth={3} zoomable pannable />
-            <Panel position="top-left">
-              <div>
-                <Text weight="semibold" size={400}>
-                  Template Structure
-                </Text>
-                <div className={styles.dragHint}>
-                  Drag a node onto another to reparent
+        {/* Flow canvas — takes remaining space */}
+        <div style={{ position: "relative", flex: 1, minWidth: 0 }}>
+          <div className={styles.flowContainer} ref={flowRef}>
+            <ReactFlow
+              nodes={nodes}
+              edges={edges}
+              onNodesChange={disabled ? undefined : onNodesChange}
+              onEdgesChange={disabled ? undefined : onEdgesChange}
+              onConnect={disabled ? undefined : onConnect}
+              onNodeClick={disabled ? undefined : onNodeClick}
+              onNodeDragStop={disabled ? undefined : onNodeDragStop}
+              onDragOver={disabled ? undefined : onDragOver}
+              onDrop={disabled ? undefined : onDrop}
+              nodeTypes={nodeTypes}
+              nodesDraggable={!disabled}
+              nodesConnectable={!disabled}
+              fitView
+              snapToGrid
+              snapGrid={[10, 10]}
+            >
+              <Background gap={16} />
+              <Controls />
+              <MiniMap nodeStrokeWidth={3} zoomable pannable />
+              <Panel position="top-left">
+                <div>
+                  <Text weight="semibold" size={400}>
+                    Template Structure
+                  </Text>
+                  {!disabled && (
+                    <>
+                      <div className={styles.dragHint}>
+                        Drag a node onto another to reparent
+                      </div>
+                      <div className={styles.dragHint}>
+                        Drag palette items into the flow &bull; Click ✕ to
+                        remove
+                      </div>
+                    </>
+                  )}
+                  {dragMsg && (
+                    <div
+                      style={{
+                        marginTop: 4,
+                        color: dragMsg.includes("removed")
+                          ? "#c62828"
+                          : "#2e7d32",
+                        fontSize: 12,
+                        fontWeight: 600,
+                      }}
+                    >
+                      {dragMsg}
+                    </div>
+                  )}
                 </div>
-                <div className={styles.dragHint}>
-                  Drag palette items into the flow
+              </Panel>
+            </ReactFlow>
+          </div>
+
+          {/* Disabled overlay */}
+          {disabled && (
+            <div
+              style={{
+                position: "absolute",
+                top: 0,
+                left: 0,
+                right: 0,
+                bottom: 0,
+                background: "rgba(255,255,255,0.7)",
+                borderRadius: "8px",
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "center",
+                zIndex: 10,
+                backdropFilter: "blur(2px)",
+              }}
+            >
+              <div
+                style={{
+                  background: "#fff",
+                  padding: "28px 40px",
+                  borderRadius: "12px",
+                  boxShadow: "0 4px 20px rgba(0,0,0,0.1)",
+                  textAlign: "center",
+                }}
+              >
+                <div style={{ fontSize: 36, marginBottom: 8 }}>📋</div>
+                <div
+                  style={{
+                    fontWeight: 700,
+                    fontSize: 16,
+                    color: "#333",
+                    marginBottom: 4,
+                  }}
+                >
+                  Save Template First
                 </div>
-                {dragMsg && (
-                  <div
-                    style={{
-                      marginTop: 4,
-                      color: "#2e7d32",
-                      fontSize: 12,
-                      fontWeight: 600,
-                    }}
-                  >
-                    {dragMsg}
-                  </div>
-                )}
+                <div style={{ fontSize: 13, color: "#666", maxWidth: 260 }}>
+                  Save your template name &amp; description to start building
+                  the structure
+                </div>
               </div>
-            </Panel>
-          </ReactFlow>
+            </div>
+          )}
         </div>
 
         {/* Right panel — tabbed + searchable palette */}
-        <div className={styles.detailPanel}>
+        <div
+          className={styles.detailPanel}
+          style={
+            disabled ? { opacity: 0.45, pointerEvents: "none" } : undefined
+          }
+        >
           <Label weight="semibold" size="large" style={{ marginBottom: 4 }}>
             Object Palette
           </Label>
@@ -707,8 +832,9 @@ function TemplateFlowInner({
                   {activeGroup.items.map((obj: any, idx: number) => (
                     <div
                       key={`palette-${obj.UniqueID || obj.id || "item"}-${idx}`}
-                      draggable
+                      draggable={!disabled}
                       onDragStart={(e) => {
+                        if (disabled) return;
                         e.dataTransfer.setData(
                           "application/json",
                           JSON.stringify(obj),
@@ -716,6 +842,11 @@ function TemplateFlowInner({
                         e.dataTransfer.effectAllowed = "move";
                       }}
                       className={styles.paletteItem}
+                      style={
+                        disabled
+                          ? { opacity: 0.5, cursor: "not-allowed" }
+                          : undefined
+                      }
                     >
                       <div style={{ fontWeight: 600, color: "#222" }}>
                         {obj.header || obj.name || "Untitled"}
@@ -829,7 +960,7 @@ function TemplateFlowInner({
 }
 
 /* ------------------------------------------------------------------ */
-/*  Detail renderer                                                   */
+/*  Detail panel                                                      */
 /* ------------------------------------------------------------------ */
 function NodeDetails({ item }: { item: any }) {
   const typeColorMap: Record<string, string> = {

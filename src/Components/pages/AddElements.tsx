@@ -200,10 +200,22 @@ export const AddElements = (): JSX.Element => {
       });
   }, []);
 
+  const isTemplateSaved = !!(templateObject as any).id;
+
   const save_template = () => {
     setSaveButtonLoading(true);
-    fetch(UrlConstant.MANAGE_SAVE_TEMPLATE + "Template", {
-      method: "post",
+
+    // If the template already has an id, use PUT to update; otherwise POST to create
+    const isUpdate = !!(templateObject as any).id;
+    const url = isUpdate
+      ? UrlConstant.MANAGE_SAVE_TEMPLATE +
+        "Template/" +
+        (templateObject as any).id
+      : UrlConstant.MANAGE_SAVE_TEMPLATE + "Template";
+    const method = isUpdate ? "put" : "post";
+
+    fetch(url, {
+      method,
       headers: {
         Accept: "application/json",
         "Content-Type": "application/json",
@@ -408,150 +420,114 @@ export const AddElements = (): JSX.Element => {
 
       {!loadwhileerender && (
         <>
-          <div className="row" style={{ padding: 10 }}>
-            <div className="col-md-9">
-              <div className="row">
-                <div className="col-md-12" style={{ marginBottom: 30 }}>
-                  {templateObject.isDeleted && (
-                    <MessageBar
-                      style={{
-                        marginTop: 20,
-                        color: "red",
-                        padding: 10,
-                      }}
-                      intent={"error"}
-                    >
-                      <MessageBarBody style={{ fontSize: 14 }}>
-                        Template{" "}
-                        <MessageBarTitle style={{ fontSize: 14 }}>
-                          {templateObject.header}
-                        </MessageBarTitle>{" "}
-                        is deleted, and cannot be edited or used in any new
-                        statement of work.
-                      </MessageBarBody>
-                    </MessageBar>
-                  )}
-                </div>
-                <div className="col-md-12">
-                  <Label htmlFor={"outlineId"} style={{ marginBottom: 10 }}>
-                    <strong>Template Name</strong>
-                  </Label>
-                  <Input
-                    disabled={templateObject.isDeleted}
-                    style={{ width: "100%" }}
-                    onChange={handletextchange}
-                    appearance="filled-darker"
-                    name="header"
-                    value={templateObject.header}
-                  />
-                </div>
-                <div className="col-md-12">
-                  <Label
-                    htmlFor={"outlineId"}
-                    style={{ marginTop: 20, marginBottom: 10 }}
-                  >
-                    <strong>Description</strong>
-                  </Label>
-                  <Textarea
-                    disabled={templateObject.isDeleted}
-                    style={{ width: "100%" }}
-                    onChange={text_area_change_event}
-                    appearance="filled-darker"
-                    name="description"
-                    value={templateObject.description}
-                  />
+          {/* ── Header bar: form fields + save button ─────────── */}
+          <div style={{ padding: "10px 10px 0" }}>
+            {templateObject.isDeleted && (
+              <MessageBar
+                style={{ marginBottom: 16, color: "red", padding: 10 }}
+                intent={"error"}
+              >
+                <MessageBarBody style={{ fontSize: 14 }}>
+                  Template{" "}
+                  <MessageBarTitle style={{ fontSize: 14 }}>
+                    {templateObject.header}
+                  </MessageBarTitle>{" "}
+                  is deleted, and cannot be edited or used in any new statement
+                  of work.
+                </MessageBarBody>
+              </MessageBar>
+            )}
 
-                  <Button
-                    className="mt-2"
-                    appearance="primary"
-                    shape="square"
-                    disabled={templateObject.isDeleted || saveButtonLoading}
-                    onClick={save_template}
-                  >
-                    {saveButtonLoading ? <Spinner size="small" /> : "Save"}
-                  </Button>
-                </div>
-                <div className="col-md-12">
-                  {disableSave && (
-                    <MessageBar style={{ marginTop: 20 }} intent={"success"}>
-                      <MessageBarBody>
-                        Template{" "}
-                        <MessageBarTitle>
-                          {templateObject.header}
-                        </MessageBarTitle>{" "}
-                        created successfully! , please associate necessary
-                        Requirements below.
-                      </MessageBarBody>
-                    </MessageBar>
-                  )}
-                </div>
-                <div className="col-md-12">
+            <div
+              style={{
+                display: "flex",
+                alignItems: "flex-start",
+                gap: 16,
+              }}
+            >
+              {/* Left — form fields */}
+              <div style={{ flex: 1, minWidth: 0 }}>
+                <div className="row">
+                  <div className="col-md-5">
+                    <Label htmlFor="outlineId" style={{ marginBottom: 6 }}>
+                      <strong>Template Name</strong>
+                    </Label>
+                    <Input
+                      disabled={templateObject.isDeleted}
+                      style={{ width: "100%" }}
+                      onChange={handletextchange}
+                      appearance="filled-darker"
+                      name="header"
+                      value={templateObject.header}
+                    />
+                  </div>
+                  <div className="col-md-5">
+                    <Label htmlFor="outlineId" style={{ marginBottom: 6 }}>
+                      <strong>Description</strong>
+                    </Label>
+                    <Textarea
+                      disabled={templateObject.isDeleted}
+                      style={{ width: "100%" }}
+                      onChange={text_area_change_event}
+                      appearance="filled-darker"
+                      name="description"
+                      value={templateObject.description}
+                      resize="vertical"
+                    />
+                  </div>
                   <div
+                    className="col-md-2"
                     style={{
-                      overflowY: "auto",
-                      maxHeight: "calc(100vh - 100px)",
-                      marginTop: 20,
-                      background: "#f0f0f0",
-                      padding: 20,
+                      display: "flex",
+                      alignItems: "flex-end",
+                      paddingBottom: 2,
                     }}
                   >
-                    <TemplateFlow
-                      root={templateObject}
-                      onTreeChange={handleTreeChange}
-                      paletteItems={requirementObjectlist}
-                    />
-
-                    {/* <ReactHierarchy
-                      nodes={templatearray}
-                      direction="horizontal"
-                      randerNode={(node: any) => {
-                        const isTemplate = node.node_type === 'Template';
-
-                        return (
-                          <Tooltip
-                            content={
-                              <table className="table table-bordered" style={{ fontSize: 10 }}>
-                                <tbody>
-                                  {
-                                    Object.keys(node).map((element) => {
-                                      if (element !== "children" && element !== "Updated_by" && element !== "Tag") {
-                                        const uniqueKey = `${node.id}-${element}`;
-                                        return (
-                                          <tr style={{ padding: 2 }} key={uniqueKey}>
-                                            <td style={{ padding: 1 }}>{element}</td>
-                                            <td style={{ padding: 1 }}>{node[element.toString()]}</td>
-                                          </tr>
-                                        );
-                                      }
-                                      return null;
-                                    })
-                                  }
-                                </tbody>
-                              </table>
-                            }
-                            positioning="above-start"
-                            withArrow
-                            relationship="label"
-                          >
-                            <Button
-                              size="small"
-                              onClick={() => associateRequirements(node)}
-                              styles={{
-                                root: {
-                                  borderColor: isTemplate ? 'green' : 'red',
-                                  borderWidth: 2,
-                                }
-                              }}
-                            >
-                              {(node.order !== undefined ? node.order + ". " : "") + node.header}
-                            </Button>
-                          </Tooltip>
-                        );
-                      }}
-                    /> */}
+                    <Button
+                      appearance="primary"
+                      shape="square"
+                      icon={<Save20Regular />}
+                      disabled={templateObject.isDeleted || saveButtonLoading}
+                      onClick={save_template}
+                      style={{ minWidth: 100 }}
+                    >
+                      {saveButtonLoading ? (
+                        <Spinner size="tiny" />
+                      ) : isTemplateSaved ? (
+                        "Update"
+                      ) : (
+                        "Save"
+                      )}
+                    </Button>
                   </div>
                 </div>
+
+                {disableSave && (
+                  <MessageBar style={{ marginTop: 10 }} intent={"success"}>
+                    <MessageBarBody>
+                      Template{" "}
+                      <MessageBarTitle>{templateObject.header}</MessageBarTitle>{" "}
+                      {isTemplateSaved
+                        ? "saved successfully!"
+                        : "created successfully!"}{" "}
+                      {!isTemplateSaved &&
+                        "Please associate necessary Requirements below."}
+                    </MessageBarBody>
+                  </MessageBar>
+                )}
               </div>
+            </div>
+          </div>
+
+          {/* ── Main content: Flow + sidebar ─────────────────── */}
+          <div className="row" style={{ padding: "0 10px" }}>
+            <div className="col-md-9" style={{ paddingRight: 0 }}>
+              <TemplateFlow
+                root={templateObject}
+                onTreeChange={handleTreeChange}
+                paletteItems={requirementObjectlist}
+                disabled={!isTemplateSaved}
+              />
             </div>
             <div className="col-md-3">
               <div className="row">
