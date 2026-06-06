@@ -1,6 +1,6 @@
 /**
  * @file Template Type Definitions
- * @copyright Boeing Proprietary
+ * @copyright Company 
  */
 
 export interface Types {

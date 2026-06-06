@@ -1,10 +1,10 @@
 // @ts-nocheck
 /**
  * @file ACME Application Header Bar
- * @author Gopinath Rajgopal <Gopinath.Rajagopal2@boeing.com>
+ * @author Gopinath Rajgopal <Gopinath.Rajagopal2@company.com>
  * @copyright
- *   Boeing Proprietary, Confidential and/or Trade Secret
- *     Copyright (c) 2023 The Boeing Company
+ *   Company ,  and/or 
+ *     Copyright (c) 2023 The Company Company
  *     Unpublished Work - All Rights Reserved
  *   Third Party Disclosure Requires Written Approval
  */
@@ -634,7 +634,7 @@ export const Configuration = (): JSX.Element => {
                             reportData.push([
                               ele.NAME,
                               comp.Part_Name,
-                              comp.Boeing_Part_Number,
+                              comp.Company_Part_Number,
                               serial_num.Part_Status != undefined && serial_num.Part_Status != "" ? serial_num.SERIAL_NUMBER + "-" + serial_num.Part_Status : serial_num.SERIAL_NUMBER,
                               sw.SW_TITLE,
                               sw.SOFTWARE_PART_NUMBER,
@@ -642,7 +642,7 @@ export const Configuration = (): JSX.Element => {
                           }
                         });
                       } else {
-                        reportData.push([ele.NAME, comp.Part_Name, comp.Boeing_Part_Number,
+                        reportData.push([ele.NAME, comp.Part_Name, comp.Company_Part_Number,
                         serial_num.Part_Status != undefined && serial_num.Part_Status != "" ? serial_num.SERIAL_NUMBER + "-" + serial_num.Part_Status : serial_num.SERIAL_NUMBER,
                         ]);
                       }
@@ -658,7 +658,7 @@ export const Configuration = (): JSX.Element => {
         });
     }
     const data = [
-      ["Element Name", "Component Part Name", "Component Boeing Part Number", "Serial Number", "Software Title", "Software Part Number"],
+      ["Element Name", "Component Part Name", "Component Company Part Number", "Serial Number", "Software Title", "Software Part Number"],
       ...reportData,
     ];
 

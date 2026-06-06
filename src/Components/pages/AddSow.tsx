@@ -2,8 +2,8 @@
  * @file Acme Detailed view
  * @author Gopinath Rajagopal
  * @copyright
- * Boeing Proprietary, Confidential and/or Trade Secret
- * Copyright (c) 2023 The Boeing Company
+ * Company ,  and/or 
+ * Copyright (c) 2023 The Company Company
  * Unpublished Work - All Rights Reserved
  * Third Party Disclosure Requires Written Approval
  */

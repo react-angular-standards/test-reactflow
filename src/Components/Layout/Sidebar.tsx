@@ -62,7 +62,7 @@ export default function Sidebar() {
         >
           {open && (
             <Typography variant="h6" noWrap component="div">
-              Boeing SOW
+              Company SOW
             </Typography>
           )}
           <IconButton onClick={toggleDrawer}>
