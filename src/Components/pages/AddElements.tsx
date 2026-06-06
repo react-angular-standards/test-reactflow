@@ -68,7 +68,7 @@ import {
 } from "@fluentui/react-components";
 
 import { IFieldType } from "./Requirementobject";
-import ReactHierarchy from "../HierarchyNode/ReactHierarchy";
+// import ReactHierarchy from "../HierarchyNode/ReactHierarchy";
 import Autocomplete from "@mui/material/Autocomplete";
 
 import TextField from "@mui/material/TextField";
@@ -85,8 +85,7 @@ import { tr } from "date-fns/locale";
 import SelectRequirement from "./SelectRequirement";
 import { ExportToCSV_Template } from "./exportToCSV";
 import TemplateFlow from "./TemplateFlow";
-import { HARDCODED_TEMPLATE } from "./hardcodedTemplate";
-import { Types } from "./TemplateTypes";
+
 const useStyles = makeStyles({
   base: {
     display: "flex",
@@ -128,9 +127,8 @@ const emptyfields = (): IFieldType => ({
 });
 
 export const AddElements = (): JSX.Element => {
+  const { screenname } = useParams<{ screenname: string }>();
   const { id } = useParams<{ id: string }>();
-  const history = useHistory();
-  const isEditMode = !!id;
   const [templateObject, setTemplateObject] = useState<IFieldType>(emptyfields);
   const [templatearray, settemplatearray] = useState<IFieldType[]>([]);
   const [templatearray1, settemplatearray1] = useState<IFieldType[]>([]);
@@ -151,72 +149,80 @@ export const AddElements = (): JSX.Element => {
   const [selectcount, setSelectCount] = useState<number>(0);
   const [inputRef, setInputFocus] = useState<boolean>(false);
   const [tags, setTags] = useState<any>([]);
-  const [flowTree, setFlowTree] = useState<Types>(HARDCODED_TEMPLATE);
-  const [flowValidationMsg, setFlowValidationMsg] = useState<string>("");
-
-  React.useEffect(() => {
-    setFlowValidationMsg(validateFlowTree(flowTree));
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
 
   React.useEffect(() => {
     setLoadwhilerender(true);
-
-    if (id) {
-      // Load from json-server
-      fetch(`${UrlConstant.TEMPLATES}/${id}`)
+    fetch(UrlConstant.QUERY_TEMPLATE_OBJECT + "Tag", {
+      mode: "cors",
+      credentials: "include",
+    })
+      .then((res) => res.json())
+      .then((result) => {
+        setTags(result);
+      });
+    if (id != undefined) {
+      fetch(UrlConstant.QUERY_TEMPLATE_BY_ID + id, {
+        mode: "cors",
+        credentials: "include",
+      })
         .then((res) => res.json())
         .then((result) => {
-          setTemplateObject(result);
-          setFlowTree(result);
-          setFlowValidationMsg(validateFlowTree(result));
-          settemplatearray([result]);
-          settemplatearray1([result]);
+          settemplatearray1(result);
+          settemplatearray(result);
+          setTemplateObject(result[0]);
           setLoadwhilerender(false);
-        })
-        .catch(() => setLoadwhilerender(false));
+        });
     } else {
       setLoadwhilerender(false);
     }
-  }, [id]);
-
-  React.useEffect(() => {
-    fetch(UrlConstant.REQUIREMENT_OBJECTS)
+    let temptemplateObjectlist: any = [];
+    fetch(UrlConstant.QUERY_TEMPLATE_OBJECT + "RequirementObject", {
+      mode: "cors",
+      credentials: "include",
+    })
       .then((res) => res.json())
-      .then((data) => setrequirementObjectList(data || []))
-      .catch(() => setrequirementObjectList([]));
+      .then((result) => {
+        temptemplateObjectlist = result;
+
+        fetch(UrlConstant.QUERY_TEMPLATE_OBJECT + "Template", {
+          mode: "cors",
+          credentials: "include",
+        })
+          .then((res) => res.json())
+          .then((result) => {
+            for (let i = 0; i < result.length; i++) {
+              result[i]["type"] = "template";
+              temptemplateObjectlist.push(result[i]);
+            }
+
+            setrequirementObjectList(temptemplateObjectlist);
+          });
+      });
   }, []);
 
   const save_template = () => {
     setSaveButtonLoading(true);
-
-    const payload = {
-      ...flowTree,
-      header: templateObject.header,
-      description: templateObject.description,
-      id: isEditMode ? Number(id) : undefined,
-    };
-
-    const url = isEditMode
-      ? `${UrlConstant.TEMPLATES}/${id}`
-      : UrlConstant.TEMPLATES;
-    const method = isEditMode ? "PUT" : "POST";
-
-    fetch(url, {
-      method,
+    fetch(UrlConstant.MANAGE_SAVE_TEMPLATE + "Template", {
+      method: "post",
       headers: {
         Accept: "application/json",
         "Content-Type": "application/json",
       },
-      body: JSON.stringify(payload),
+      body: JSON.stringify(templateObject),
     })
       .then((res) => res.json())
-      .then(() => {
+      .then((result) => {
         setDisableSave(true);
         setSaveButtonLoading(false);
+        const temptemplatearray = [];
+        temptemplatearray?.push(result);
+        settemplatearray(temptemplatearray);
+        settemplatearray1(temptemplatearray);
+        setCount1(count1 + 1);
+        setTemplateObject(result);
         setTimeout(() => {
-          history.push("/templates");
-        }, 800);
+          setDisableSave(false);
+        }, 3000);
       })
       .catch((error) => {
         console.error("Error saving template:", error);
@@ -280,7 +286,6 @@ export const AddElements = (): JSX.Element => {
     })
       .then((res) => res.json())
       .then((result) => {
-        // console.log$&
         if (id != undefined) {
           fetch(UrlConstant.QUERY_TEMPLATE_BY_ID + id, {
             mode: "cors",
@@ -321,36 +326,9 @@ export const AddElements = (): JSX.Element => {
     setSelectCount(selectcount + 1);
   };
 
-  /* ---- Tree validation ------------------------------------------ */
-  const countTreeNodes = (root: Types): number => {
-    let count = 1;
-    for (const child of root.children || []) {
-      count += countTreeNodes(child);
-    }
-    return count;
-  };
-
-  const countTreeEdges = (root: Types): number => {
-    let edges = root.children?.length || 0;
-    for (const child of root.children || []) {
-      edges += countTreeEdges(child);
-    }
-    return edges;
-  };
-
-  const validateFlowTree = (tree: Types): string => {
-    const nodes = countTreeNodes(tree);
-    const edges = countTreeEdges(tree);
-    if (nodes > 1 && edges !== nodes - 1) {
-      const orphanCount = nodes - 1 - edges;
-      return `${orphanCount} free object${orphanCount > 1 ? "s" : ""} not a child of any parent. Drag onto a parent node to connect.`;
-    }
-    return "";
-  };
-
-  const handleFlowTreeChange = (tree: Types) => {
-    setFlowTree(tree);
-    setFlowValidationMsg(validateFlowTree(tree));
+  const handleTreeChange = (tree: any) => {
+    setTemplateObject(tree);
+    settemplatearray([tree]);
   };
 
   return (
@@ -365,14 +343,16 @@ export const AddElements = (): JSX.Element => {
         </BreadcrumbItem>
         <BreadcrumbDivider />
         <BreadcrumbItem>
-          <BreadcrumbButton onClick={() => history.push("/templates")}>
-            <Fluid16Regular color="black" fontSize={15} /> Templates
+          <BreadcrumbButton
+            onClick={() => (window.location.href = "#/formbuilder")}
+          >
+            <Fluid16Regular color="black" fontSize={15} /> {screenname}
           </BreadcrumbButton>
         </BreadcrumbItem>
         <BreadcrumbDivider />
         <BreadcrumbItem>
           <BreadcrumbButton icon={<AddCircle20Filled />} current>
-            {isEditMode ? "Edit Template" : "Add Template"}
+            ADD SOW
           </BreadcrumbButton>
         </BreadcrumbItem>
       </Breadcrumb>
@@ -434,7 +414,11 @@ export const AddElements = (): JSX.Element => {
                 <div className="col-md-12" style={{ marginBottom: 30 }}>
                   {templateObject.isDeleted && (
                     <MessageBar
-                      style={{ marginTop: 20, color: "red", padding: 10 }}
+                      style={{
+                        marginTop: 20,
+                        color: "red",
+                        padding: 10,
+                      }}
                       intent={"error"}
                     >
                       <MessageBarBody style={{ fontSize: 14 }}>
@@ -476,19 +460,12 @@ export const AddElements = (): JSX.Element => {
                     name="description"
                     value={templateObject.description}
                   />
-                  {/* <Button disabled={templateObject.isDeleted} onClick={save_template} style={{ width: 30, marginTop: 10 }}>
-                    Save
-                  </Button> */}
 
                   <Button
                     className="mt-2"
                     appearance="primary"
                     shape="square"
-                    disabled={
-                      templateObject.isDeleted ||
-                      saveButtonLoading ||
-                      !!flowValidationMsg
-                    }
+                    disabled={templateObject.isDeleted || saveButtonLoading}
                     onClick={save_template}
                   >
                     {saveButtonLoading ? <Spinner size="small" /> : "Save"}
@@ -518,17 +495,9 @@ export const AddElements = (): JSX.Element => {
                       padding: 20,
                     }}
                   >
-                    {flowValidationMsg && (
-                      <MessageBar intent="warning" style={{ marginBottom: 12 }}>
-                        <MessageBarBody>
-                          <MessageBarTitle>Validation Error</MessageBarTitle>
-                          {flowValidationMsg}
-                        </MessageBarBody>
-                      </MessageBar>
-                    )}
                     <TemplateFlow
-                      root={isEditMode ? flowTree : HARDCODED_TEMPLATE}
-                      onTreeChange={handleFlowTreeChange}
+                      root={templateObject}
+                      onTreeChange={handleTreeChange}
                       paletteItems={requirementObjectlist}
                     />
 
@@ -546,7 +515,6 @@ export const AddElements = (): JSX.Element => {
                                   {
                                     Object.keys(node).map((element) => {
                                       if (element !== "children" && element !== "Updated_by" && element !== "Tag") {
-                                        // Generate a unique key by combining element with node.id
                                         const uniqueKey = `${node.id}-${element}`;
                                         return (
                                           <tr style={{ padding: 2 }} key={uniqueKey}>
@@ -555,7 +523,7 @@ export const AddElements = (): JSX.Element => {
                                           </tr>
                                         );
                                       }
-                                      return null; // Return null if the condition is not met to avoid rendering unnecessary elements
+                                      return null;
                                     })
                                   }
                                 </tbody>
@@ -757,21 +725,6 @@ export const AddElements = (): JSX.Element => {
                       </TagPicker>
                     )}
                   </Field>
-
-                  {/* <span style={{ display: "block", marginTop: 20 }}>
-                    <DownloadIcon /> <strong>Download</strong>
-                    <span style={{ display: "block", marginLeft: "20px", marginTop: 10 }}></span>
-                    <Button disabled size="medium" icon={<DocumentPdf24Regular />} onClick={() => alert("TBD")} style={{ marginRight: 5 }}></Button>
-                    <Button  size="medium" icon={<DocumentData24Filled />} onClick={() => ExportToCSV_Template(templatearray)}></Button>
-
-                  </span> */}
-
-                  {/* <span style={{ display: "block", marginTop: 20 }}></span>
-                  <strong>Delete/Archive</strong>
-                  <span style={{ display: "block", marginLeft: "20px", marginTop: 10 }}></span>
-                  <Button size="medium" icon={<Delete24Filled />} disabled={templateObject.isDeleted} onClick={delete_template}>
-
-                  </Button> */}
                 </div>
               </div>
             </div>
@@ -779,7 +732,8 @@ export const AddElements = (): JSX.Element => {
         </>
       )}
 
-      <SelectRequirement
+      {/* Palette groups in TemplateFlow replace the old selection dialogs */}
+      {/* <SelectRequirement
         open={open}
         setOpen={setOpen}
         updateTemplate={update_tempalte}
@@ -787,7 +741,7 @@ export const AddElements = (): JSX.Element => {
         setSelectedRequirementObject={setSelectedRequirementObject}
         requirementObjectlist={requirementObjectlist}
         loadWhileRendering={loadwhileerender}
-      />
+      /> */}
 
       {/* open={open} */}
       <Dialog
@@ -801,56 +755,6 @@ export const AddElements = (): JSX.Element => {
         <DialogTitle id="alert-dialog-title"></DialogTitle>
         <DialogContent>
           <DialogContentText id="alert-dialog-description">
-            {/*
-                        <Field style={{ maxWidth: 400 }}>
-                            <TagPicker
-                                size="medium"
-                                onOptionSelect={(event: any, value: any) => (
-                                    selectedRequirementObject.children = [],
-                                    selectedRequirementObject.children = value["selectedOptions"],
-                                    setSelectedRequirementObject(selectedRequirementObject),
-                                    console.log(selectedRequirementObject)
-                                )}
-                                selectedOptions={selectedRequirementObject["children"]}
-                            >
-                                <TagPickerControl>
-                                    <TagPickerGroup>
-                                        {selectedRequirementObject["children"] != undefined && selectedRequirementObject["children"].map((option: any) => (
-                                            <Tag
-                                                key={option.id}
-                                                shape="rounded"
-                                                media={<Avatar aria-hidden name={option.header} color="colorful" />}
-                                                value={option}
-                                            >
-                                                {option.header.replace(/_/g, " ")}
-                                            </Tag>
-                                        ))}
-                                    </TagPickerGroup>
-                                    <TagPickerInput aria-label="Select Employees" />
-                                </TagPickerControl>
-                                <TagPickerList>
-                                    {requirementObjectlist.length > 0
-                                        ? requirementObjectlist.map((option: any) => (
-                                            <TagPickerOption
-                                                media={
-                                                    <Avatar
-                                                        shape="square"
-                                                        aria-hidden
-                                                        name={option.header}
-                                                        color="colorful"
-                                                    />
-                                                }
-                                                value={option}
-                                                key={option.id}
-                                            >
-                                                {option.header.replace(/_/g, " ")}
-                                            </TagPickerOption>
-                                        ))
-                                        : "No options available"}
-                                </TagPickerList>
-                            </TagPicker>
-                        </Field> */}
-
             <Autocomplete
               style={{ zIndex: 1 }}
               multiple
@@ -875,9 +779,12 @@ export const AddElements = (): JSX.Element => {
           </DialogContentText>
         </DialogContent>
         <DialogActions>
-          {/* <Button onClick={() => update_tempalte(selectedRequirementObject)}>Update</Button> */}
           <div
-            style={{ display: "flex", justifyContent: "flex-end", gap: "10px" }}
+            style={{
+              display: "flex",
+              justifyContent: "flex-end",
+              gap: "10px",
+            }}
           >
             <Button appearance="secondary" onClick={() => setOpen(false)}>
               Cancel

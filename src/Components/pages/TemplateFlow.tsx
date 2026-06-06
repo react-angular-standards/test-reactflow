@@ -490,7 +490,12 @@ function TemplateFlowInner({
       const newTree = cloneTree(treeRoot);
       const newItem = {
         ...droppedItem,
-        UniqueID: (droppedItem.UniqueID || "item") + "-" + Date.now(),
+        UniqueID:
+          (droppedItem.UniqueID || "item") +
+          "-" +
+          Date.now() +
+          "-" +
+          Math.random().toString(36).slice(2, 7),
       };
       addNodeToParent(newTree, closest.id, newItem);
 
@@ -674,9 +679,9 @@ function TemplateFlowInner({
 
               {activeGroup && (
                 <div style={{ overflowY: "auto", flex: 1, minHeight: 0 }}>
-                  {activeGroup.items.map((obj: any) => (
+                  {activeGroup.items.map((obj: any, idx: number) => (
                     <div
-                      key={obj.UniqueID || obj.id}
+                      key={obj.UniqueID || obj.id || `palette-${idx}`}
                       draggable
                       onDragStart={(e) => {
                         e.dataTransfer.setData(
@@ -919,9 +924,9 @@ function NodeDetails({ item }: { item: any }) {
           <div
             style={{ display: "flex", flexWrap: "wrap", gap: 6, marginTop: 4 }}
           >
-            {item.choices.map((c: string) => (
+            {item.choices.map((c: string, idx: number) => (
               <span
-                key={c}
+                key={`choice-${c}-${idx}`}
                 style={{
                   display: "inline-block",
                   padding: "4px 12px",
@@ -945,9 +950,9 @@ function NodeDetails({ item }: { item: any }) {
           <div
             style={{ display: "flex", flexWrap: "wrap", gap: 6, marginTop: 4 }}
           >
-            {item.children.map((child: any) => (
+            {item.children.map((child: any, idx: number) => (
               <span
-                key={child.UniqueID || child.id}
+                key={child.UniqueID || child.id || `child-${idx}`}
                 style={{
                   display: "inline-block",
                   padding: "4px 12px",
@@ -971,9 +976,9 @@ function NodeDetails({ item }: { item: any }) {
           <div
             style={{ display: "flex", flexWrap: "wrap", gap: 6, marginTop: 4 }}
           >
-            {item.Tag.map((t: any) => (
+            {item.Tag.map((t: any, idx: number) => (
               <span
-                key={t.id}
+                key={t.id ?? `tag-${idx}`}
                 style={{
                   display: "inline-block",
                   padding: "4px 12px",
