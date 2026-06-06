@@ -142,9 +142,21 @@ function buildFlowData(
   parentId: string | null = null,
   depth = 0,
   siblingIndex = 0,
+  seenIds?: Set<string>,
 ): { nodes: Node[]; edges: Edge[] } {
-  const nodeId =
+  const _seen = seenIds || new Set<string>();
+  let nodeId =
     root.UniqueID || `${parentId || "root"}-${depth}-${siblingIndex}`;
+
+  // Deduplicate: if we've already used this ID, append a suffix
+  let dedupeCounter = 0;
+  const originalId = nodeId;
+  while (_seen.has(nodeId)) {
+    dedupeCounter++;
+    nodeId = `${originalId}__dup${dedupeCounter}`;
+  }
+  _seen.add(nodeId);
+
   const x = depth * 280 + 20;
   const y = siblingIndex * 140 + 20;
 
@@ -167,12 +179,19 @@ function buildFlowData(
       type: "smoothstep",
       animated: true,
       style: { stroke: "#1976d2", strokeWidth: 2 },
-      markerEnd: { type: "arrowclosed", color: "#1976d2" },
+      markerEnd: { type: "arrowclosed" as any, color: "#1976d2" },
     });
   }
 
   root.children?.forEach((child: any, idx: number) => {
-    const childData = buildFlowData(child, onInfoClick, nodeId, depth + 1, idx);
+    const childData = buildFlowData(
+      child,
+      onInfoClick,
+      nodeId,
+      depth + 1,
+      idx,
+      _seen,
+    );
     nodes.push(...childData.nodes);
     edges.push(...childData.edges);
   });
@@ -687,7 +706,7 @@ function TemplateFlowInner({
                 <div style={{ overflowY: "auto", flex: 1, minHeight: 0 }}>
                   {activeGroup.items.map((obj: any, idx: number) => (
                     <div
-                      key={obj.UniqueID || obj.id || `palette-${idx}`}
+                      key={`palette-${obj.UniqueID || obj.id || "item"}-${idx}`}
                       draggable
                       onDragStart={(e) => {
                         e.dataTransfer.setData(
@@ -958,7 +977,7 @@ function NodeDetails({ item }: { item: any }) {
           >
             {item.children.map((child: any, idx: number) => (
               <span
-                key={child.UniqueID || child.id || `child-${idx}`}
+                key={`detail-child-${child.UniqueID || child.id || "c"}-${idx}`}
                 style={{
                   display: "inline-block",
                   padding: "4px 12px",
@@ -984,7 +1003,7 @@ function NodeDetails({ item }: { item: any }) {
           >
             {item.Tag.map((t: any, idx: number) => (
               <span
-                key={t.id ?? `tag-${idx}`}
+                key={`detail-tag-${t.id ?? "t"}-${idx}`}
                 style={{
                   display: "inline-block",
                   padding: "4px 12px",

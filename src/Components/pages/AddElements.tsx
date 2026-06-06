@@ -251,7 +251,7 @@ export const AddElements = (): JSX.Element => {
   };
 
   const handletextchange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const tempformprop: any = templateObject;
+    const tempformprop: any = { ...templateObject };
     tempformprop[e.target.name] = e.target.value;
     setTemplateObject(tempformprop);
 
@@ -262,7 +262,7 @@ export const AddElements = (): JSX.Element => {
     event: React.ChangeEvent<HTMLTextAreaElement>,
   ) => {
     const { name, value } = event.target;
-    const tempformprop: any = templateObject;
+    const tempformprop: any = { ...templateObject };
     tempformprop[name] = value;
     setTemplateObject(tempformprop);
     setCount(count + 1);
@@ -320,8 +320,8 @@ export const AddElements = (): JSX.Element => {
   };
 
   const onTagSelect: TagPickerProps["onOptionSelect"] = (e, data) => {
-    templateObject["Tag"] = data.selectedOptions;
-    setTemplateObject(templateObject);
+    const updated: any = { ...templateObject, Tag: data.selectedOptions };
+    setTemplateObject(updated);
     setInputFocus(true);
     setSelectCount(selectcount + 1);
   };
@@ -631,29 +631,31 @@ export const AddElements = (): JSX.Element => {
                       >
                         <TagPickerControl>
                           <TagPickerGroup>
-                            {templateObject.Tag?.map((option: any) => (
-                              <Tag
-                                disabled={templateObject.isDeleted}
-                                key={option.NAME}
-                                shape="rounded"
-                                media={
-                                  <Avatar
-                                    aria-hidden
-                                    name={option.NAME}
-                                    color="colorful"
-                                  />
-                                }
-                                value={option}
-                              >
-                                {option.NAME}
-                              </Tag>
-                            ))}
+                            {templateObject.Tag?.map(
+                              (option: any, tagIdx: number) => (
+                                <Tag
+                                  disabled={templateObject.isDeleted}
+                                  key={`tag-${option.NAME}-${tagIdx}`}
+                                  shape="rounded"
+                                  media={
+                                    <Avatar
+                                      aria-hidden
+                                      name={option.NAME}
+                                      color="colorful"
+                                    />
+                                  }
+                                  value={option}
+                                >
+                                  {option.NAME}
+                                </Tag>
+                              ),
+                            )}
                           </TagPickerGroup>
                           <TagPickerInput aria-label="Select Employees" />
                         </TagPickerControl>
                         <TagPickerList>
                           {tags.length > 0
-                            ? tags.map((option: any) => (
+                            ? tags.map((option: any, tagIdx: number) => (
                                 <TagPickerOption
                                   media={
                                     <Avatar
@@ -664,7 +666,7 @@ export const AddElements = (): JSX.Element => {
                                     />
                                   }
                                   value={option}
-                                  key={option.NAME}
+                                  key={`tagopt-${option.NAME}-${tagIdx}`}
                                 >
                                   {option.NAME}
                                 </TagPickerOption>
@@ -682,29 +684,31 @@ export const AddElements = (): JSX.Element => {
                       >
                         <TagPickerControl>
                           <TagPickerGroup>
-                            {templateObject.Tag?.map((option: any) => (
-                              <Tag
-                                disabled={templateObject.isDeleted}
-                                key={option.NAME}
-                                shape="rounded"
-                                media={
-                                  <Avatar
-                                    aria-hidden
-                                    name={option.NAME}
-                                    color="colorful"
-                                  />
-                                }
-                                value={option}
-                              >
-                                {option.NAME}
-                              </Tag>
-                            ))}
+                            {templateObject.Tag?.map(
+                              (option: any, tagIdx: number) => (
+                                <Tag
+                                  disabled={templateObject.isDeleted}
+                                  key={`tag-${option.NAME}-${tagIdx}`}
+                                  shape="rounded"
+                                  media={
+                                    <Avatar
+                                      aria-hidden
+                                      name={option.NAME}
+                                      color="colorful"
+                                    />
+                                  }
+                                  value={option}
+                                >
+                                  {option.NAME}
+                                </Tag>
+                              ),
+                            )}
                           </TagPickerGroup>
                           <TagPickerInput aria-label="Select Employees" />
                         </TagPickerControl>
                         <TagPickerList>
                           {tags.length > 0
-                            ? tags.map((option: any) => (
+                            ? tags.map((option: any, tagIdx: number) => (
                                 <TagPickerOption
                                   media={
                                     <Avatar
@@ -715,7 +719,7 @@ export const AddElements = (): JSX.Element => {
                                     />
                                   }
                                   value={option}
-                                  key={option.NAME}
+                                  key={`tagopt-${option.NAME}-${tagIdx}`}
                                 >
                                   {option.NAME}
                                 </TagPickerOption>
