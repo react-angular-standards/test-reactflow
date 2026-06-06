@@ -275,49 +275,34 @@ export const AddElements = (): JSX.Element => {
     setOpen(true);
   };
 
-  const update_tempalte = (object: any) => {
-    setLoadwhilerender(true);
-
+  const update_tempalte = () => {
+    setSaveButtonLoading(true);
     fetch(UrlConstant.MANAGE_ASSOCIATE + "Template" + templateObject.id, {
       method: "post",
       headers: {
         Accept: "application/json",
         "Content-Type": "application/json",
       },
-      body: JSON.stringify(selectedRequirementObject),
+      body: JSON.stringify(templateObject),
     })
       .then((res) => res.json())
       .then((result) => {
-        if (id != undefined) {
-          fetch(UrlConstant.QUERY_TEMPLATE_BY_ID + id, {
-            mode: "cors",
-            credentials: "include",
-          })
-            .then((res) => res.json())
-            .then((result) => {
-              settemplatearray1(result);
-              settemplatearray(result);
-              setTemplateObject(result[0]);
-              setLoadwhilerender(false);
-            });
-        } else {
-          fetch(
-            UrlConstant.QUERY_TEMPLATE_BY_ID + templateObject["id"]?.toString(),
-            {
-              mode: "cors",
-              credentials: "include",
-            },
-          )
-            .then((res) => res.json())
-            .then((result) => {
-              settemplatearray1(result);
-              settemplatearray(result);
-              setTemplateObject(result[0]);
-              setLoadwhilerender(false);
-            });
-        }
-
-        setOpen(false);
+        setDisableSave(true);
+        setSaveButtonLoading(false);
+        const temptemplatearray = [];
+        temptemplatearray?.push(result);
+        settemplatearray(temptemplatearray);
+        settemplatearray1(temptemplatearray);
+        setCount1(count1 + 1);
+        setTemplateObject(result);
+        setTimeout(() => {
+          setDisableSave(false);
+        }, 3000);
+      })
+      .catch((error) => {
+        console.error("Error updating template:", error);
+        setDisableSave(false);
+        setSaveButtonLoading(false);
       });
   };
 
@@ -478,7 +463,9 @@ export const AddElements = (): JSX.Element => {
                       shape="square"
                       icon={<Save20Regular />}
                       disabled={templateObject.isDeleted || saveButtonLoading}
-                      onClick={save_template}
+                      onClick={
+                        isTemplateSaved ? update_tempalte : save_template
+                      }
                       style={{ minWidth: 100 }}
                     >
                       {saveButtonLoading ? (
@@ -762,7 +749,7 @@ export const AddElements = (): JSX.Element => {
             <Button
               appearance="secondary"
               disabled={loadwhileerender}
-              onClick={() => update_tempalte(selectedRequirementObject)}
+              onClick={() => update_tempalte()}
             >
               {loadwhileerender ? <Spinner size="small" /> : "Update"}
             </Button>
