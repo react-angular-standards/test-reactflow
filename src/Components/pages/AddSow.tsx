@@ -1,13 +1,3 @@
-/**
- * @file Acme Detailed view
- * @author Gopinath Rajagopal
- * @copyright
- * Company ,  and/or
- * Copyright (c) 2023 The Company Company
- * Unpublished Work - All Rights Reserved
- * Third Party Disclosure Requires Written Approval
- */
-
 import { useParams } from "react-router-dom";
 import {
   Avatar,
@@ -36,7 +26,7 @@ import {
   Popover,
   PopoverSurface,
   PopoverTrigger,
-  type PositioningImperativeRef,
+  PositioningImperativeRef,
   Select,
   Skeleton,
   SkeletonItem,
@@ -52,50 +42,56 @@ import {
   Textarea,
   Toast,
   ToastBody,
-  ToastTitle,
   Toaster,
+  ToastTitle,
   Tooltip,
   useId,
   useRestoreFocusTarget,
   useToastController,
 } from "@fluentui/react-components";
-
 import {
-  ArrowUploadRegular,
-  Calendar20Regular,
-  ChevronRightRegular,
-  DocumentContract16Regular,
-  DocumentPdf24Regular,
-  DocumentData24Filled,
   Home20Filled,
-  Status20Filled,
   Delete24Filled,
-  Dismiss20Regular,
+  DocumentTextExtract20Filled,
+  DocumentContract16Regular,
+  ContentView20Filled,
+  Briefcase16Regular,
+  Calendar20Regular,
+  Status20Filled,
+  DocumentPdf24Regular,
+  Document24Filled,
+  DocumentData24Filled,
 } from "@fluentui/react-icons";
+import { XIcon } from "@primer/octicons-react";
 
+import React, { useState } from "react";
+import { UrlConstant } from "../Util/UrlConstants";
+import { GenerateUUID } from "../Util/utils";
+
+import { ActionList, Label, StateLabel } from "@primer/react";
+import NestedForm from "./form/nestedform";
+import { Tab, TabList, TabPanel, Tabs } from "react-tabs";
+import { IFieldType } from "./Formbuilder";
 import {
-  XIcon,
-  PeopleIcon,
   TagIcon,
+  WorkflowIcon,
+  PeopleIcon,
+  CalendarIcon,
   DownloadIcon,
 } from "@primer/octicons-react";
-
-import React, { useState, useRef, useEffect } from "react";
-import { UrlConstant } from "../Util/UrlConstants";
-
-import { ExportToCSV_SOW, handleExportPdf } from "./exportToCSV";
-import { Tab, TabList, TabPanel, Tabs } from "react-tabs";
-import { convertToTitleCase, GenerateUUID } from "../Util/utils";
-import NestedForm from "./nestedform";
+import { getDayOfYear } from "date-fns";
+import { ExportToCSV_SOW, GeneratePDF } from "./exportToCSV";
 
 const useStyles = makeStyles({
   container: {
     display: "flex",
     gap: "10px",
   },
+
   contentHeader: {
     marginTop: "0",
   },
+
   redIcon: {
     color: "red",
   },
@@ -106,33 +102,45 @@ export const AddSow = (): JSX.Element => {
   const { id } = useParams<{ id: string }>();
   const [templateList, setTemplateList] = useState<any>([]);
   const [tags, setTags] = useState<any>([]);
-  const [selectedTemplates, setSelectedTemplates] = useState<any[]>([]);
-  const [formData, setFormData] = useState<any[]>([]);
-  const [dataset, setDataset] = useState<any>({});
-  const [selectTemplateCount, setSelectTemplateCount] = useState<number>(0);
+  const [sowList, setSowList] = useState<any>([]);
+  const [selectedOptions, setSelectedOptions] = React.useState<any>([]);
+  const [formdata, setformdata] = useState<any[]>([]);
+  const [formdata1, setformdata1] = useState<any[]>([]);
+  const [selecttemplateCount, setselecttemplateCount] = useState<number>(0);
+  const [dataset, setdataset] = useState<any>({});
+  const [dataset1, setdataset1] = useState<any>({});
+  const [isOpen, setIsOpen] = useState<boolean>(false);
+  const [columns, setColumns] = useState<any>([]);
   const [disableSelectTemplate, setDisableSelectTemplate] =
     useState<boolean>(false);
-  const [isOpen, setIsOpen] = useState<boolean>(false);
-  const [isImporting, setIsImporting] = useState<boolean>(false);
-  const inputRef = React.useRef<HTMLInputElement>(null);
+  const [selectcount, setSelectCount] = useState<number>(0);
+  // add popover.
+  const [openPopover, setOpenPopover] = React.useState(false);
+  const headerId = useId();
+  const buttonRef = React.useRef<HTMLButtonElement>(null);
   const positioningRef = React.useRef<PositioningImperativeRef>(null);
   const styles = useStyles();
-  const [openPopover, setOpenPopover] = React.useState(false);
-  const [isInputFocused, setIsInputFocused] = useState<boolean>(false);
+  const restoreFocusTargetAttribute = useRestoreFocusTarget();
+  const [inputRef, setInputFocus] = useState<boolean>(false);
+  const [displaySaveMessage, setDisplaySaveMessage] = useState<boolean>(false);
+  const [loading, setLoading] = useState<boolean>(true);
+  const [useeffectcall, setuseeffectcall] = useState<number>(0);
   const [saveButtonLoading, setSaveButtonLoading] = useState(false);
-  const [loading, setLoading] = useState(true);
-  const [selectCount, setSelectCount] = useState<number>(0);
-  const [useEffectcall, setuseEffectcall] = useState<number>(0);
-  const [displaySaveMessage, setDisplaySaveMessage] = useState(false);
-  const buttonRef = React.useRef<HTMLButtonElement>(null);
-  const selectedTemplatesRef = useRef<any[]>([]);
+  const [isExporting, setIsExporting] = useState(false);
+  const [selectedTemplates, setSelectedTemplates] = useState<any[]>([]);
+  const selectedTemplatesRef = React.useRef<any[]>([]);
 
-  useEffect(() => {
+  const handleExportPdf = (item: any) => {
+    setIsExporting(true);
+    GeneratePDF(item);
+  };
+
+  React.useEffect(() => {
     selectedTemplatesRef.current = selectedTemplates;
   }, [selectedTemplates]);
 
   React.useEffect(() => {
-    if (id !== undefined && useEffectcall === 0) {
+    if (id != undefined && useeffectcall == 0) {
       setDisableSelectTemplate(true);
       fetch(UrlConstant.QUERY_BY_ID + id + "/", {
         mode: "cors",
@@ -144,35 +152,37 @@ export const AddSow = (): JSX.Element => {
             "🚀 ~ file: AddSow.tsx ~ line 143 ~ .then ~ result",
             result,
           );
-          setDataset(result);
-          setLoading(false);
-          setuseEffectcall(1);
-          setDisableSelectTemplate(false);
 
-          // Reconstruct selected templates with persisted order for edit mode
+          setdataset(result);
+          setdataset1(result);
+          setLoading(false);
+          setuseeffectcall(1);
+          // setformdata(result.Template!=undefined?result.Template:[])
+          // setformdata1(result.Template!=undefined?result.Template:[])
+          // setSelectedOptions(result.Template!=undefined?result.Template:[])
           const instances: any[] = [];
-          Object.entries(result).forEach(([key, value]) => {
+          Object.entries(result).forEach(([key, value]: [string, any]) => {
             if (
               typeof value === "object" &&
               value !== null &&
               "TemplateId" in value &&
-              !(value as any).isDeleted
+              !value.isDeleted
             ) {
-              const v = value as any;
-              const objKey = v.objKey || key;
+              const parts = value.ojbKey ? value.ojbKey.split("#") : [];
+              const instanceId = parts.length === 3 ? parts[2] : key;
               instances.push({
-                instanceId: objKey,
-                templateId: v.TemplateId,
-                header: v.TemplateHeader || key,
-                objKey,
-                tabOrder: v.tabOrder ?? instances.length,
+                instanceId,
+                templateId: value.TemplateId,
+                header: value.TemplateHeader || parts[0] || "",
+                ojbKey: value.ojbKey || key,
+                tabOrder: value.tabOrder ?? 0,
               });
             }
           });
           instances.sort((a, b) => (a.tabOrder ?? 0) - (b.tabOrder ?? 0));
           setSelectedTemplates(instances);
+          setDisableSelectTemplate(false);
         });
-
       fetch(UrlConstant.QUERY_BY_NAME + id, {
         mode: "cors",
         credentials: "include",
@@ -180,10 +190,13 @@ export const AddSow = (): JSX.Element => {
         .then((res) => res.json())
         .then((result) => {
           console.log(
-            "🚀 ~ file: AddSow.tsx ~ line 168 ~ .then ~ result",
+            "🚀 ~ file: AddSow.tsx ~ line 160 ~ .then ~ result",
             result,
           );
-          setFormData(result);
+
+          setformdata(result);
+          setformdata1(result);
+          // setSelectedOptions(result);
           setDisableSelectTemplate(false);
         });
     } else {
@@ -193,17 +206,7 @@ export const AddSow = (): JSX.Element => {
     if (buttonRef.current) {
       positioningRef.current?.setTarget(buttonRef.current);
     }
-
-    fetch(UrlConstant.QUERY_TEMPLATE_OBJECT + "?template", {
-      mode: "cors",
-      credentials: "include",
-    })
-      .then((res) => res.json())
-      .then((result) => {
-        setTags(result);
-      });
-
-    fetch(UrlConstant.QUERY_TEMPLATE_OBJECT + "?template", {
+    fetch(UrlConstant.QUERY_TEMPLATE_OBJECT + "Template", {
       mode: "cors",
       credentials: "include",
     })
@@ -211,39 +214,41 @@ export const AddSow = (): JSX.Element => {
       .then((result) => {
         setTemplateList(result);
       });
+    //get the tags
+    fetch(UrlConstant.QUERY_TEMPLATE_OBJECT + "Tag", {
+      mode: "cors",
+      credentials: "include",
+    })
+      .then((res) => res.json())
+      .then((result) => {
+        setTags(result);
+      });
   }, [buttonRef, positioningRef]);
 
   const addTemplateInstance = (templateOption: any) => {
     const instanceId = GenerateUUID();
-    const objKey = `${templateOption.header}#${templateOption.id}#${instanceId}`;
+    const ojbKey =
+      templateOption.header + "#" + templateOption.id + "#" + instanceId;
+    const nextTabOrder = selectedTemplates.length;
     const newInstance = {
       instanceId,
       templateId: templateOption.id,
       header: templateOption.header,
-      objKey,
+      ojbKey,
+      tabOrder: nextTabOrder,
     };
+    setSelectedTemplates((prev) => [...prev, newInstance]);
+    setdataset((prevDataset: any) => ({
+      ...prevDataset,
+      [ojbKey]: {
+        TemplateId: templateOption.id,
+        TemplateHeader: templateOption.header,
+        ojbKey,
+        tabOrder: nextTabOrder,
+      },
+    }));
 
-    setSelectedTemplates((prev) => {
-      const next = [...prev, newInstance];
-      setDataset((d: any) => {
-        const newD = { ...d };
-        newD[objKey] = {
-          ...(newD[objKey] || {}),
-          TemplateId: templateOption.id,
-          TemplateHeader: templateOption.header,
-          objKey,
-        };
-        next.forEach((t, idx) => {
-          if (newD[t.objKey]) {
-            newD[t.objKey] = { ...newD[t.objKey], tabOrder: idx };
-          }
-        });
-        return newD;
-      });
-      return next;
-    });
-
-    const alreadyCached = formData.some((f: any) => f.id === templateOption.id);
+    const alreadyCached = formdata.some((f: any) => f.id === templateOption.id);
     if (!alreadyCached) {
       setDisableSelectTemplate(true);
       fetch(UrlConstant.QUERY_TEMPLATE_BY_ID + templateOption.id.toString(), {
@@ -253,77 +258,75 @@ export const AddSow = (): JSX.Element => {
         .then((res) => res.json())
         .then((result) => {
           if (result && result.length > 0) {
-            setFormData((prev: any) => {
-              if (prev.some((f: any) => f.id === result[0].id)) return prev;
-              return [...prev, result[0]];
-            });
+            setformdata((prevFormData: any) => [...prevFormData, result[0]]);
           }
           setDisableSelectTemplate(false);
+          setOpenPopover(false);
         })
-        .catch(() => {
+        .catch((error) => {
+          console.error("Error fetching template:", error);
           setDisableSelectTemplate(false);
         });
+    } else {
+      setOpenPopover(false);
     }
   };
 
   const removeTemplateInstance = (instanceId: string) => {
-    setSelectedTemplates((prev) => {
-      const idx = prev.findIndex((t) => t.instanceId === instanceId);
-      if (idx === -1) return prev;
-      const instance = prev[idx];
-      const next = prev.filter((t) => t.instanceId !== instanceId);
-      setDataset((d: any) => {
-        const newD = { ...d };
-        if (newD[instance.objKey]) {
-          newD[instance.objKey] = {
-            ...newD[instance.objKey],
-            isDeleted: true,
-            deletedDate: new Date().toISOString(),
+    const instance = selectedTemplatesRef.current.find(
+      (inst: any) => inst.instanceId === instanceId,
+    );
+    if (!instance) return;
+
+    const remaining = selectedTemplatesRef.current.filter(
+      (inst: any) => inst.instanceId !== instanceId,
+    );
+    const reordered = remaining.map((inst: any, idx: number) => ({
+      ...inst,
+      tabOrder: idx,
+    }));
+
+    setdataset((prevDataset: any) => {
+      const newDataset = { ...prevDataset };
+      if (newDataset[instance.ojbKey]) {
+        newDataset[instance.ojbKey] = {
+          ...newDataset[instance.ojbKey],
+          isDeleted: true,
+          deletedDate: new Date().toISOString(),
+        };
+      }
+      reordered.forEach((inst: any) => {
+        if (newDataset[inst.ojbKey]) {
+          newDataset[inst.ojbKey] = {
+            ...newDataset[inst.ojbKey],
+            tabOrder: inst.tabOrder,
           };
         }
-        next.forEach((t, i) => {
-          if (newD[t.objKey]) {
-            newD[t.objKey] = { ...newD[t.objKey], tabOrder: i };
-          }
-        });
-        return newD;
       });
-      return next;
+      return newDataset;
     });
+
+    setSelectedTemplates(reordered);
   };
 
-  const reorderTemplates = (dragIndex: number, dropIndex: number) => {
-    if (dragIndex === dropIndex) return;
-    setSelectedTemplates((prev) => {
-      const next = [...prev];
-      const [removed] = next.splice(dragIndex, 1);
-      next.splice(dropIndex, 0, removed);
-      setDataset((d: any) => {
-        const newD = { ...d };
-        next.forEach((t, idx) => {
-          if (newD[t.objKey]) {
-            newD[t.objKey] = { ...newD[t.objKey], tabOrder: idx };
-          }
-        });
-        return newD;
-      });
-      return next;
-    });
-  };
-
-  const handleTemplatePickerSelect: TagPickerProps["onOptionSelect"] = (
-    _,
-    data: any,
-  ) => {
+  const onOptionSelect: TagPickerProps["onOptionSelect"] = (e, data: any) => {
     const current = selectedTemplatesRef.current;
-    const next = (data.selectedOptions || []) as any[];
+    const next = Array.isArray(data.selectedOptions)
+      ? data.selectedOptions
+      : [];
+
+    const currentIds = new Set(current.map((inst: any) => inst.instanceId));
     const nextIds = new Set(next.map((o: any) => o.instanceId).filter(Boolean));
 
     if (next.length < current.length) {
-      const removed = current.find((t) => !nextIds.has(t.instanceId));
+      const removed = current.find(
+        (inst: any) => !nextIds.has(inst.instanceId),
+      );
       if (removed) {
         removeTemplateInstance(removed.instanceId);
       }
+      setInputFocus(true);
+      setselecttemplateCount((prev) => prev + 1);
       return;
     }
 
@@ -331,22 +334,48 @@ export const AddSow = (): JSX.Element => {
       const added = next.find((o: any) => !o.instanceId);
       if (added) {
         addTemplateInstance(added);
-      } else if (data.value) {
+      } else if (data.value && !data.value.instanceId) {
         addTemplateInstance(data.value);
       }
+      setInputFocus(true);
+      setselecttemplateCount((prev) => prev + 1);
       return;
     }
   };
 
-  const handleDelete = (instanceId: string) => {
-    removeTemplateInstance(instanceId);
+  const reorderTemplates = (dragIndex: number, dropIndex: number) => {
+    if (dragIndex === dropIndex) return;
+    const reordered = [...selectedTemplatesRef.current];
+    const [removed] = reordered.splice(dragIndex, 1);
+    reordered.splice(dropIndex, 0, removed);
+
+    const withTabOrder = reordered.map((inst: any, idx: number) => ({
+      ...inst,
+      tabOrder: idx,
+    }));
+
+    setdataset((prevDataset: any) => {
+      const newDataset = { ...prevDataset };
+      withTabOrder.forEach((inst: any) => {
+        if (newDataset[inst.ojbKey]) {
+          newDataset[inst.ojbKey] = {
+            ...newDataset[inst.ojbKey],
+            tabOrder: inst.tabOrder,
+          };
+        }
+      });
+      return newDataset;
+    });
+
+    setSelectedTemplates(withTabOrder);
   };
 
-  const onTagClick: TagPickerProps["onOptionSelect"] = (_, data) => {
+  const onTagSelect: TagPickerProps["onOptionSelect"] = (e, data) => {
     dataset["Tag"] = data.selectedOptions;
-    setDataset(dataset);
-    setIsInputFocused(true);
-    setSelectCount((prev) => prev + 1);
+    setdataset(dataset);
+    setdataset1(dataset);
+    setInputFocus(true);
+    setSelectCount(selectcount + 1);
   };
 
   const text_box_change_event = (
@@ -355,8 +384,9 @@ export const AddSow = (): JSX.Element => {
   ) => {
     const { name, value } = event.target;
     dataset[name] = value;
-    setDataset(dataset);
-    setSelectCount((prev) => prev + 1);
+    setdataset(dataset);
+    setdataset1(dataset);
+    setSelectCount(selectcount + 1);
   };
 
   const text_area_change_event = (
@@ -365,8 +395,9 @@ export const AddSow = (): JSX.Element => {
   ) => {
     const { name, value } = event.target;
     dataset[name] = value;
-    setDataset(dataset);
-    setSelectCount((prev) => prev + 1);
+    setdataset(dataset);
+    setdataset1(dataset);
+    setSelectCount(selectcount + 1);
   };
 
   const select_change_event = (
@@ -375,14 +406,59 @@ export const AddSow = (): JSX.Element => {
   ) => {
     const { name, value } = event.target;
     dataset[name] = value;
-    setDataset(dataset);
-    setSelectCount((prev) => prev + 1);
+    setdataset(dataset);
+    setdataset1(dataset);
+    setSelectCount(selectcount + 1);
+  };
+  const query_template = () => {
+    setDisableSelectTemplate(true);
+    for (let i = 0; i < selectedOptions.length; i++) {
+      fetch(
+        UrlConstant.QUERY_TEMPLATE_BY_ID + selectedOptions[i]["id"].toString(),
+        {
+          mode: "cors",
+          credentials: "include",
+        },
+      )
+        .then((res) => res.json())
+        .then((result) => {
+          let found = false;
+          for (let j = 0; j < formdata.length; j++) {
+            if (formdata[j]["id"] == result["id"]) {
+              found = true;
+            }
+          }
+          if (found == false) {
+            formdata.push(result);
+            dataset[result["header"]] = {};
+            setformdata(formdata);
+          }
+          found = false;
+          for (let i = 0; i < formdata.length; i++) {
+            found = false;
+            for (let j = 0; j < selectedOptions.length; j++) {
+              if (formdata[i]["id"] == selectedOptions[j]["id"]) {
+                found = true;
+              }
+            }
+            if (found == false) {
+              formdata.splice(i, 1);
+            }
+          }
+          setOpenPopover(false);
+          setformdata(formdata);
+          setDisableSelectTemplate(false);
+        });
+    }
+
+    // console.log$&
   };
 
   const save_form = () => {
     let isError = false;
     setSaveButtonLoading(true);
-    // console.log(dataset)
+    // console.log$&
+    // delete formdata["0"];
     fetch(UrlConstant.PUBLIC_SOW + screenname, {
       method: "post",
       headers: {
@@ -390,40 +466,69 @@ export const AddSow = (): JSX.Element => {
         "Content-Type": "application/json",
       },
       body: JSON.stringify(dataset),
-    })
-      .then((res) => {
-        if (res.status === 409) {
-          isError = true;
-        }
-        return res.json();
-      })
-      .then((result) => {
-        setDisplaySaveMessage(false);
-        setSaveButtonLoading(false);
-        notify();
-      })
-      .catch(() => {
-        setSaveButtonLoading(false);
-      });
+    }).then((res) => {
+      if (res.status == 409) {
+        isError = true;
+      }
+      res.json();
+
+      setDisplaySaveMessage(false);
+      setSaveButtonLoading(false);
+      notify();
+    });
   };
 
-  const handleToggleDrawer = (screen: string) => {
+  const handletoggleDrawer = (action: string) => {
     setIsOpen(isOpen ? false : true);
   };
 
-  const editRow = (row: any) => {
+  const edit_sow = (data: any) => {
     setIsOpen(true);
+  };
+
+  const handleTagRemove = (tagToRemove: any) => {
+    setSelectedOptions((prev: any) =>
+      prev.filter((tag: any) => tag.id !== tagToRemove.id),
+    );
   };
 
   const { dispatchToast } = useToastController("toast");
 
-  const notify = () => {
+  const notify = () =>
     dispatchToast(
       <Toast>
-        <ToastTitle>Record added successfully.</ToastTitle>
+        {/* <ToastTitle>Title</ToastTitle> */}
+        <ToastBody>SOW added successfully. </ToastBody>
       </Toast>,
       { intent: "success" },
     );
+
+  function extractFirstPart(input: any) {
+    const parts = input.split("#");
+    return parts[0].trim(); // Return the first part, trimmed of whitespace
+  }
+
+  // const handleDelete = (templateId) => {
+  //     console.log("🚀 ~ file: AddSow.tsx ~ line 473 ~ handleDelete ~ templateId", templateId)
+
+  //     setdataset((prevDataset) => {
+  //         const newDataset = { ...prevDataset };
+
+  //         // Instead of deleting, mark the entry as deleted
+  //         if (newDataset[templateId]) {
+  //             newDataset[templateId] = {
+  //                 ...newDataset[templateId],
+  //                 isDeleted: true,
+  //                 deletedAt: new Date().toISOString()
+  //             };
+  //         }
+
+  //         return newDataset;
+  //     });
+  // };
+
+  const handleDelete = (instanceId: string) => {
+    removeTemplateInstance(instanceId);
   };
 
   return (
@@ -438,24 +543,24 @@ export const AddSow = (): JSX.Element => {
             Home
           </BreadcrumbButton>
         </BreadcrumbItem>
+
         <BreadcrumbDivider />
         <BreadcrumbItem>
           <BreadcrumbButton
             onClick={() => (window.location.href = "#/page/statement_of_work")}
           >
-            <ChevronRightRegular color="black" fontSize={15} />
-            Statement of Work
+            <Briefcase16Regular color="black" fontSize={15} />
+            Statement of work
           </BreadcrumbButton>
         </BreadcrumbItem>
         <BreadcrumbDivider />
         <BreadcrumbItem>
-          <BreadcrumbButton style={{ color: "#0f6cbd" }} current>
+          <BreadcrumbButton style={{ color: "#590b8ef2" }} current>
             {" "}
             Manage
           </BreadcrumbButton>
         </BreadcrumbItem>
       </Breadcrumb>
-
       {loading ? (
         <Skeleton>
           <div className="row">
@@ -517,10 +622,12 @@ export const AddSow = (): JSX.Element => {
         <div className="row" style={{ marginTop: 10 }}>
           <div className="col-md-9">
             {/* <MessageBar intent={"error"} style={{marginBottom:40}}>
-              <MessageBarBody>
-                Record has been deleted by <b>{dataset.UserInfo.NAME}</b> and cannot be edited.
-              </MessageBarBody>
-            </MessageBar> */}
+                          <MessageBarBody>
+
+                              Record has been deleted by <b>{dataset.UserInfo.NAME}</b> and cannot be edited.
+
+                          </MessageBarBody>
+                          </MessageBar> */}
             <div className="row">
               <div className="col-md-12">
                 <span
@@ -533,9 +640,10 @@ export const AddSow = (): JSX.Element => {
                 >
                   Name
                 </span>
+
                 <Input
                   appearance="outline"
-                  ref={inputRef}
+                  autoFocus={inputRef}
                   name="statement_of_work_name"
                   onChange={(e) => text_box_change_event(e, dataset)}
                   value={dataset["statement_of_work_name"]}
@@ -561,30 +669,37 @@ export const AddSow = (): JSX.Element => {
                   <TagPicker
                     size="medium"
                     appearance="outline"
-                    onOptionSelect={handleTemplatePickerSelect}
+                    onOptionSelect={onOptionSelect}
                     selectedOptions={
-                      selectedTemplates.map((t) => ({
-                        id: t.templateId,
-                        header: t.header,
-                        instanceId: t.instanceId,
-                        key: t.instanceId,
+                      selectedTemplates.map((inst: any) => ({
+                        id: inst.templateId,
+                        header: inst.header,
+                        instanceId: inst.instanceId,
+                        ojbKey: inst.ojbKey,
                       })) as any
                     }
                   >
                     <TagPickerControl>
                       <TagPickerGroup>
-                        {selectedTemplates.map((instance) => (
+                        {selectedTemplates.map((instance: any) => (
                           <Tag
                             style={{ fontSize: 12 }}
                             key={instance.instanceId}
                             shape="circular"
-                            dismissible
                             media={
                               <Avatar
                                 aria-hidden
                                 name={instance.header}
                                 color="colorful"
                               />
+                            }
+                            value={
+                              {
+                                id: instance.templateId,
+                                header: instance.header,
+                                instanceId: instance.instanceId,
+                                ojbKey: instance.ojbKey,
+                              } as any
                             }
                           >
                             {instance.header.replace(/_/g, " ")}
@@ -622,6 +737,55 @@ export const AddSow = (): JSX.Element => {
                 </Field>
               </div>
 
+              {/*
+                            <div className="col-md-12">
+                                <span
+                                    style={{ textDecoration: "none", marginTop: 20, marginBottom: 10, display: "block", fontSize: 12 }}
+                                >
+                                    Select Templates
+                                </span>
+                                <Field>
+                                    <TagPicker
+                                        size="medium"
+                                       appearance="outline"
+                                        onOptionSelect={onOptionSelect}
+                                        selectedOptions={selectedOptions}
+                                    >
+                                        <TagPickerControl>
+                                            <TagPickerGroup>
+                                                {selectedOptions.map((option: any) => (
+                                                    <Tag
+                                                        style={{ fontSize: 12 }}
+                                                        key={option.header}
+                                                        shape="circular"
+                                                        media={<Avatar aria-hidden name={option.header} color="colorful" />}
+                                                        value={option}
+                                                    >
+                                                        {option.header.replace(/_/g, " ")}
+                                                    </Tag>
+                                                ))}
+                                            </TagPickerGroup>
+                                            <TagPickerInput aria-label="Select Employees" />
+                                        </TagPickerControl>
+                                        <TagPickerList style={{ height: 400, fontFamily: "monospace" }}>
+                                            {templateList.length > 0
+                                                ? templateList.map((option: any) => (
+                                                    <TagPickerOption
+                                                        media={
+                                                            <Avatar shape="circular" size={24} aria-hidden name={option.header} color="colorful" />
+                                                        }
+                                                        value={option}
+                                                        key={option.header}
+                                                    >
+                                                        {option.header.replace(/_/g, " ")}
+                                                    </TagPickerOption>
+                                                ))
+                                                : "No options available"}
+                                        </TagPickerList>
+                                    </TagPicker>
+                                </Field>
+                            </div> */}
+
               <div className="col-md-12">
                 <span
                   style={{
@@ -637,101 +801,180 @@ export const AddSow = (): JSX.Element => {
                 <Textarea
                   appearance="outline"
                   name="statement_of_work_description"
-                  onChange={(e: any) => text_area_change_event(e, dataset)}
+                  onChange={(e) => text_area_change_event(e, dataset)}
                   value={dataset["statement_of_work_description"]}
                   style={{ width: "100%", fontSize: "12px !important" }}
                   size="small"
                   title="header"
                 />
-              </div>
 
-              {disableSelectTemplate && (
-                <Skeleton>
-                  <SkeletonItem
-                    style={{ marginBottom: 10, padding: 200, marginTop: 20 }}
-                  ></SkeletonItem>
-                </Skeleton>
-              )}
+                {disableSelectTemplate && (
+                  <Skeleton>
+                    <SkeletonItem
+                      style={{ marginBottom: 10, padding: 200, marginTop: 20 }}
+                    ></SkeletonItem>
+                  </Skeleton>
+                )}
+                {!disableSelectTemplate && (
+                  <Tabs style={{ marginTop: 20 }}>
+                    <TabList>
+                      {selectedTemplates.map((instance: any, index: number) => {
+                        const matchingFormDataItem = formdata.find(
+                          (formItem: any) =>
+                            formItem.id === instance.templateId,
+                        );
 
-              {!disableSelectTemplate && (
-                <Tabs style={{ marginTop: 20 }}>
-                  <TabList>
-                    {selectedTemplates.map((instance, index) => {
-                      const matchingFormDataItem = formData.find(
-                        (formItem: any) => formItem.id === instance.templateId,
-                      );
+                        if (matchingFormDataItem) {
+                          return (
+                            <React.Fragment key={instance.ojbKey}>
+                              <Tab
+                                draggable
+                                onDragStart={(e: React.DragEvent) => {
+                                  e.dataTransfer.setData(
+                                    "text/plain",
+                                    String(index),
+                                  );
+                                }}
+                                onDragOver={(e: React.DragEvent) => {
+                                  e.preventDefault();
+                                }}
+                                onDrop={(e: React.DragEvent) => {
+                                  e.preventDefault();
+                                  const dragIndex = Number(
+                                    e.dataTransfer.getData("text/plain"),
+                                  );
+                                  reorderTemplates(dragIndex, index);
+                                }}
+                              >
+                                <strong>
+                                  <DocumentContract16Regular />
+                                  {instance.header
+                                    .replace(/_/g, " ")
+                                    .replace("Template", " ")}
+                                </strong>
 
-                      if (!matchingFormDataItem) return null;
+                                <button
+                                  onClick={(e) => {
+                                    e.stopPropagation();
+                                    handleDelete(instance.instanceId);
+                                  }}
+                                  aria-label="Delete tab"
+                                  style={{
+                                    background: "none",
+                                    border: "none",
+                                    cursor: "pointer",
+                                  }}
+                                >
+                                  <XIcon fill="red" /> {/* Make the icon red */}
+                                </button>
+                              </Tab>
+                            </React.Fragment>
+                          );
+                        }
+                        return null; // Return null if no matching form data item
+                      })}
+                    </TabList>
 
-                      return (
-                        <React.Fragment key={instance.instanceId}>
-                          <Tab
-                            draggable
-                            onDragStart={(e) => {
-                              e.dataTransfer.setData(
-                                "text/plain",
-                                String(index),
-                              );
-                              e.dataTransfer.effectAllowed = "move";
-                            }}
-                            onDragOver={(e) => e.preventDefault()}
-                            onDrop={(e) => {
-                              e.preventDefault();
-                              const dragIndex = Number(
-                                e.dataTransfer.getData("text/plain"),
-                              );
-                              reorderTemplates(dragIndex, index);
-                            }}
-                          >
-                            <strong>
-                              <DocumentContract16Regular />
-                              {instance.header
-                                ?.replace(/_/g, " ")
-                                .replace("Template", "")}
-                            </strong>
-                            <button
-                              onClick={(e) => {
-                                e.stopPropagation();
-                                handleDelete(instance.instanceId);
-                              }}
-                              aria-label="Delete tab"
-                              style={{
-                                background: "none",
-                                border: "none",
-                                cursor: "pointer",
-                              }}
-                            >
-                              <XIcon fill="red" />
-                            </button>
-                          </Tab>
-                        </React.Fragment>
-                      );
+                    {selectedTemplates.map((instance: any, index: number) => {
+                      // Type guard to check if value has a TemplateId
+                      if (
+                        typeof dataset[instance.ojbKey] === "object" &&
+                        dataset[instance.ojbKey] !== null &&
+                        "TemplateId" in dataset[instance.ojbKey] &&
+                        !(dataset[instance.ojbKey] as any)["isDeleted"]
+                      ) {
+                        const datasetItem = dataset[instance.ojbKey] as {
+                          TemplateId?: number;
+                          id?: number;
+                        };
+
+                        // Check if the TemplateId is defined
+                        if (datasetItem.TemplateId) {
+                          // Find the matching object in formdata by TemplateId
+                          const matchingFormDataItem = formdata.find(
+                            (formItem: any) =>
+                              formItem.id === datasetItem.TemplateId,
+                          );
+
+                          // If a matching form data item is found, render TabPanel
+                          if (matchingFormDataItem) {
+                            return (
+                              <React.Fragment key={instance.ojbKey}>
+                                <TabPanel
+                                  key={`tabpanel-${instance.ojbKey}`}
+                                  style={{ padding: 20 }}
+                                >
+                                  <NestedForm
+                                    schema={matchingFormDataItem} // Pass the matched form data item as schema
+                                    screenname={screenname}
+                                    formvalue={dataset}
+                                    formData={dataset[instance.ojbKey]}
+                                    onCloseDrawer={handletoggleDrawer}
+                                  />
+                                </TabPanel>
+                              </React.Fragment>
+                            );
+                          }
+                        }
+                      }
+                      return null; // Return null if no TemplateId is found or no matching form data item
                     })}
-                  </TabList>
+                  </Tabs>
+                  // <Tabs style={{ marginTop: 20 }}>
 
-                  {selectedTemplates.map((instance) => {
-                    const matchingFormDataItem = formData.find(
-                      (formItem: any) => formItem.id === instance.templateId,
-                    );
+                  //     <TabList>
+                  //         {formdata.map((item: any, index: number) => (
+                  //             <Tab key={`${item.id}-${index}`}>
+                  //                 {" "}
+                  //                 <strong>
+                  //                     <DocumentContract16Regular />
+                  //                     {item.header.replace(/_/g, " ").replace("Template", " ")}
+                  //                 </strong>
+                  //             </Tab>
+                  //         ))}
+                  //     </TabList>
 
-                    if (!matchingFormDataItem) return null;
+                  //     {formdata.map((item: any, index: number) => (
 
-                    return (
-                      <React.Fragment key={instance.instanceId}>
-                        <TabPanel style={{ padding: 20 }}>
-                          <NestedForm
-                            schema={matchingFormDataItem}
-                            screenname={screenname}
-                            formvalue={dataset}
-                            formData={dataset[instance.objKey]}
-                            onCloseDrawer={handleToggleDrawer}
-                          />
-                        </TabPanel>
-                      </React.Fragment>
-                    );
-                  })}
-                </Tabs>
-              )}
+                  //         <TabPanel key={`${item.id}-${index}`} style={{ padding: 20 }}>
+
+                  //             <NestedForm
+                  //                 schema={item}
+                  //                 screenname={screenname}
+                  //                 formvalue={dataset}
+                  //                 onCloseDrawer={handletoggleDrawer}
+                  //             ></NestedForm>
+
+                  //         </TabPanel>
+                  //     ))}
+                  // </Tabs>
+                )}
+
+                <Toaster toasterId={"toast"} />
+                <div style={{ marginBottom: 50, marginTop: 20 }}>
+                  {/* <Button style={{ marginRight: 10 }} onClick={save_form}>Save</Button> */}
+
+                  <Button
+                    className="mt-2"
+                    appearance="primary"
+                    shape="square"
+                    disabled={saveButtonLoading}
+                    onClick={save_form}
+                  >
+                    {saveButtonLoading ? <Spinner size="small" /> : "Save"}
+                  </Button>
+
+                  {/* <div className="row">
+                                        <div className="col-6"> <pre>{JSON.stringify(dataset, null, 4)}</pre>  </div>
+                                        <div className="col-6">
+                                            <pre>{formdata.length}
+                                                {JSON.stringify(formdata, null, 4)}</pre></div>
+
+
+
+                                    </div> */}
+                </div>
+              </div>
             </div>
           </div>
 
@@ -756,7 +999,6 @@ export const AddSow = (): JSX.Element => {
               <option value="Released">Released</option>
               <option value="Closed">Closed</option>
             </Select>
-
             {dataset.UserInfo != undefined && (
               <>
                 <span
@@ -805,11 +1047,11 @@ export const AddSow = (): JSX.Element => {
               >
                 <TagIcon size={16} /> <strong>Tags</strong>
               </span>
-              {selectCount % 2 === 0 ? (
+              {selectcount % 2 == 0 ? (
                 <TagPicker
                   size="medium"
                   appearance="outline"
-                  onOptionSelect={onTagClick}
+                  onOptionSelect={onTagSelect}
                   selectedOptions={dataset["Tag"]}
                 >
                   <TagPickerControl>
@@ -858,12 +1100,12 @@ export const AddSow = (): JSX.Element => {
                 <TagPicker
                   size="medium"
                   appearance="outline"
-                  onOptionSelect={onTagClick}
-                  selectedOptions={dataset["Tag"]}
+                  onOptionSelect={onTagSelect}
+                  selectedOptions={dataset1["Tag"]}
                 >
                   <TagPickerControl>
                     <TagPickerGroup>
-                      {dataset.Tag?.map((option: any) => (
+                      {dataset1.Tag?.map((option: any) => (
                         <Tag
                           key={option.NAME}
                           shape="circular"
@@ -906,7 +1148,6 @@ export const AddSow = (): JSX.Element => {
                 </TagPicker>
               )}
             </Field>
-
             <span style={{ display: "block", marginTop: 20, fontSize: 12 }}>
               <DownloadIcon /> <strong>Download</strong>
               <span
@@ -948,18 +1189,19 @@ export const AddSow = (): JSX.Element => {
                 }}
                 style={{ marginRight: 5 }}
               ></Button>
-              {/* <Button size="medium" icon={<DocumentData24Filled />} onClick={() => ExportToCSV_SOW(formdata)}></Button> */}
+              {/* <Button  size="medium" icon={<DocumentData24Filled />} onClick={() => ExportToCSV_SOW(formdata)}></Button> */}
             </span>
             {/* <span style={{display:"block",marginTop:20,fontSize:12}}>
-              <strong>Delete/Archive</strong></span>
-              <span style={{ display: "block", marginLeft: "20px",marginTop:10,fontSize:12}}></span>
-              <Button size="medium" style={{color:"#df6e6e"}} icon={<Delete24Filled />} onClick={()=>alert("TBD")}>
-              </Button>
-            </span> */}
+                          <strong>Delete/Archive</strong></span>
+                          <span style={{ display: "block", marginLeft: "20px",marginTop:10,fontSize:12}}></span>
+                          <Button  size="medium" style={{color:"#df6e6e"}} icon={<Delete24Filled />} onClick={()=>alert("TBD")}>
+
+                          </Button> */}
           </div>
         </div>
       )}
-      <Toaster toasterId={"toast"} />
+
+      {/* {JSON.stringify(formdata)} */}
     </div>
   );
 };
