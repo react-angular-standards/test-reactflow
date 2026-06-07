@@ -129,6 +129,7 @@ export const AddSow = (): JSX.Element => {
   const [isExporting, setIsExporting] = useState(false);
   const [selectedTemplates, setSelectedTemplates] = useState<any[]>([]);
   const selectedTemplatesRef = React.useRef<any[]>([]);
+  const formdataRef = React.useRef<any[]>([]);
 
   const handleExportPdf = (item: any) => {
     setIsExporting(true);
@@ -138,6 +139,14 @@ export const AddSow = (): JSX.Element => {
   React.useEffect(() => {
     selectedTemplatesRef.current = selectedTemplates;
   }, [selectedTemplates]);
+
+  React.useEffect(() => {
+    formdataRef.current = formdata;
+  }, [formdata]);
+
+  React.useEffect(() => {
+    setuseeffectcall(0);
+  }, [id]);
 
   React.useEffect(() => {
     if (id != undefined && useeffectcall == 0) {
@@ -157,9 +166,6 @@ export const AddSow = (): JSX.Element => {
           setdataset1(result);
           setLoading(false);
           setuseeffectcall(1);
-          // setformdata(result.Template!=undefined?result.Template:[])
-          // setformdata1(result.Template!=undefined?result.Template:[])
-          // setSelectedOptions(result.Template!=undefined?result.Template:[])
           const instances: any[] = [];
           Object.entries(result).forEach(([key, value]: [string, any]) => {
             if (
@@ -182,8 +188,12 @@ export const AddSow = (): JSX.Element => {
           instances.sort((a, b) => (a.tabOrder ?? 0) - (b.tabOrder ?? 0));
           setSelectedTemplates(instances);
           setDisableSelectTemplate(false);
+        })
+        .catch(() => {
+          setLoading(false);
+          setDisableSelectTemplate(false);
         });
-      fetch(UrlConstant.QUERY_BY_NAME + id, {
+      fetch(UrlConstant.QUERY_BY_SOW + id, {
         mode: "cors",
         credentials: "include",
       })
@@ -194,9 +204,13 @@ export const AddSow = (): JSX.Element => {
             result,
           );
 
-          setformdata(result);
-          setformdata1(result);
-          // setSelectedOptions(result);
+          if (Array.isArray(result)) {
+            setformdata(result);
+            setformdata1(result);
+          }
+          setDisableSelectTemplate(false);
+        })
+        .catch(() => {
           setDisableSelectTemplate(false);
         });
     } else {
@@ -223,7 +237,38 @@ export const AddSow = (): JSX.Element => {
       .then((result) => {
         setTags(result);
       });
-  }, [buttonRef, positioningRef]);
+  }, [id, useeffectcall, buttonRef, positioningRef]);
+
+  React.useEffect(() => {
+    if (selectedTemplates.length === 0) return;
+    selectedTemplates.forEach((instance: any) => {
+      const alreadyCached = formdataRef.current.some(
+        (f: any) => String(f.id) === String(instance.templateId),
+      );
+      if (!alreadyCached) {
+        fetch(UrlConstant.QUERY_TEMPLATE_BY_ID + instance.templateId, {
+          mode: "cors",
+          credentials: "include",
+        })
+          .then((res) => res.json())
+          .then((result) => {
+            if (result && result.length > 0) {
+              setformdata((prev: any) => {
+                if (
+                  prev.some((f: any) => String(f.id) === String(result[0].id))
+                ) {
+                  return prev;
+                }
+                return [...prev, result[0]];
+              });
+            }
+          })
+          .catch((err) =>
+            console.error("Fallback template fetch failed:", err),
+          );
+      }
+    });
+  }, [selectedTemplates]);
 
   const addTemplateInstance = (templateOption: any) => {
     const instanceId = GenerateUUID();
@@ -238,17 +283,28 @@ export const AddSow = (): JSX.Element => {
       tabOrder: nextTabOrder,
     };
     setSelectedTemplates((prev) => [...prev, newInstance]);
-    setdataset((prevDataset: any) => ({
-      ...prevDataset,
-      [ojbKey]: {
-        TemplateId: templateOption.id,
-        TemplateHeader: templateOption.header,
+    setdataset((prevDataset: any) => {
+      const nextTemplates = [...(prevDataset.Template || [])];
+      nextTemplates.push({
+        id: templateOption.id,
+        header: templateOption.header,
         ojbKey,
-        tabOrder: nextTabOrder,
-      },
-    }));
+      });
+      return {
+        ...prevDataset,
+        [ojbKey]: {
+          TemplateId: templateOption.id,
+          TemplateHeader: templateOption.header,
+          ojbKey,
+          tabOrder: nextTabOrder,
+        },
+        Template: nextTemplates,
+      };
+    });
 
-    const alreadyCached = formdata.some((f: any) => f.id === templateOption.id);
+    const alreadyCached = formdataRef.current.some(
+      (f: any) => String(f.id) === String(templateOption.id),
+    );
     if (!alreadyCached) {
       setDisableSelectTemplate(true);
       fetch(UrlConstant.QUERY_TEMPLATE_BY_ID + templateOption.id.toString(), {
@@ -303,6 +359,9 @@ export const AddSow = (): JSX.Element => {
           };
         }
       });
+      newDataset.Template = (newDataset.Template || []).filter(
+        (t: any) => t.ojbKey !== instance.ojbKey,
+      );
       return newDataset;
     });
 
@@ -459,7 +518,7 @@ export const AddSow = (): JSX.Element => {
     setSaveButtonLoading(true);
     // console.log$&
     // delete formdata["0"];
-    fetch(UrlConstant.PUBLIC_SOW + screenname, {
+    fetch(UrlConstant.MANAGE_SAVE + screenname, {
       method: "post",
       headers: {
         Accept: "application/json",
@@ -821,7 +880,7 @@ export const AddSow = (): JSX.Element => {
                       {selectedTemplates.map((instance: any, index: number) => {
                         const matchingFormDataItem = formdata.find(
                           (formItem: any) =>
-                            formItem.id === instance.templateId,
+                            String(formItem.id) === String(instance.templateId),
                         );
 
                         if (matchingFormDataItem) {
@@ -893,7 +952,8 @@ export const AddSow = (): JSX.Element => {
                           // Find the matching object in formdata by TemplateId
                           const matchingFormDataItem = formdata.find(
                             (formItem: any) =>
-                              formItem.id === datasetItem.TemplateId,
+                              String(formItem.id) ===
+                              String(datasetItem.TemplateId),
                           );
 
                           // If a matching form data item is found, render TabPanel
