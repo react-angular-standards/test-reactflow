@@ -2,7 +2,7 @@
  * @file Acme Detailed view
  * @author Gopinath Rajagopal
  * @copyright
- * Company ,  and/or 
+ * Company ,  and/or
  * Copyright (c) 2023 The Company Company
  * Unpublished Work - All Rights Reserved
  * Third Party Disclosure Requires Written Approval
@@ -106,8 +106,8 @@ export const AddSow = (): JSX.Element => {
   const { id } = useParams<{ id: string }>();
   const [templateList, setTemplateList] = useState<any>([]);
   const [tags, setTags] = useState<any>([]);
-  const [selectedOptions, setSelectedOptions] = React.useState<any>([]);
-  const [formData, setFormData] = useState<any>([]);
+  const [selectedTemplates, setSelectedTemplates] = useState<any[]>([]);
+  const [formData, setFormData] = useState<any[]>([]);
   const [dataset, setDataset] = useState<any>({});
   const [selectTemplateCount, setSelectTemplateCount] = useState<number>(0);
   const [disableSelectTemplate, setDisableSelectTemplate] =
@@ -122,10 +122,14 @@ export const AddSow = (): JSX.Element => {
   const [saveButtonLoading, setSaveButtonLoading] = useState(false);
   const [loading, setLoading] = useState(true);
   const [selectCount, setSelectCount] = useState<number>(0);
-  const [tabCount, setTabCount] = useState<number>(0);
   const [useEffectcall, setuseEffectcall] = useState<number>(0);
   const [displaySaveMessage, setDisplaySaveMessage] = useState(false);
   const buttonRef = React.useRef<HTMLButtonElement>(null);
+  const selectedTemplatesRef = useRef<any[]>([]);
+
+  useEffect(() => {
+    selectedTemplatesRef.current = selectedTemplates;
+  }, [selectedTemplates]);
 
   React.useEffect(() => {
     if (id !== undefined && useEffectcall === 0) {
@@ -144,6 +148,29 @@ export const AddSow = (): JSX.Element => {
           setLoading(false);
           setuseEffectcall(1);
           setDisableSelectTemplate(false);
+
+          // Reconstruct selected templates with persisted order for edit mode
+          const instances: any[] = [];
+          Object.entries(result).forEach(([key, value]) => {
+            if (
+              typeof value === "object" &&
+              value !== null &&
+              "TemplateId" in value &&
+              !(value as any).isDeleted
+            ) {
+              const v = value as any;
+              const objKey = v.objKey || key;
+              instances.push({
+                instanceId: objKey,
+                templateId: v.TemplateId,
+                header: v.TemplateHeader || key,
+                objKey,
+                tabOrder: v.tabOrder ?? instances.length,
+              });
+            }
+          });
+          instances.sort((a, b) => (a.tabOrder ?? 0) - (b.tabOrder ?? 0));
+          setSelectedTemplates(instances);
         });
 
       fetch(UrlConstant.QUERY_BY_NAME + id, {
@@ -157,7 +184,6 @@ export const AddSow = (): JSX.Element => {
             result,
           );
           setFormData(result);
-          setSelectedOptions(result);
           setDisableSelectTemplate(false);
         });
     } else {
@@ -187,74 +213,133 @@ export const AddSow = (): JSX.Element => {
       });
   }, [buttonRef, positioningRef]);
 
-  const onOptionSelect: TagPickerProps["onOptionSelect"] = (_, data: any) => {
-    // console.log(data)
-    const tempFormProp: any = [];
-    // const newValue = JSON.parse(JSON.stringify(data.value));
-    setSelectedOptions(data.selectedOptions);
-    dataset["template"] = data.selectedOptions;
-    // console.log(data)
-    setDataset({ ...dataset });
-    setIsInputFocused(true);
-    setSelectTemplateCount((prev) => prev + 1);
-    const templateFormProp = formData;
-    let optionfound = false;
-    let found = false;
+  const addTemplateInstance = (templateOption: any) => {
+    const instanceId = GenerateUUID();
+    const objKey = `${templateOption.header}#${templateOption.id}#${instanceId}`;
+    const newInstance = {
+      instanceId,
+      templateId: templateOption.id,
+      header: templateOption.header,
+      objKey,
+    };
 
-    for (let i = 0; i < templateFormProp.length; i++) {
-      found = false;
-      for (let j = 0; j < data.selectedOptions.length; j++) {
-        if (templateFormProp[i]["id"] === data.selectedOptions[j]["id"]) {
-          found = true;
-        }
-      }
-      if (found === false) {
-        templateFormProp.splice(i, 1);
-      }
-    }
+    setSelectedTemplates((prev) => {
+      const next = [...prev, newInstance];
+      setDataset((d: any) => {
+        const newD = { ...d };
+        newD[objKey] = {
+          ...(newD[objKey] || {}),
+          TemplateId: templateOption.id,
+          TemplateHeader: templateOption.header,
+          objKey,
+        };
+        next.forEach((t, idx) => {
+          if (newD[t.objKey]) {
+            newD[t.objKey] = { ...newD[t.objKey], tabOrder: idx };
+          }
+        });
+        return newD;
+      });
+      return next;
+    });
 
-    for (let i = 0; i < templateFormProp.length; i++) {
-      if (
-        templateFormProp[i]["id"] ===
-        data.selectedOptions[data.selectedOptions.length - 1]["id"]
-      ) {
-        optionfound = true;
-      }
-    }
-
-    setFormData(templateFormProp);
-
-    if (!optionfound) {
+    const alreadyCached = formData.some((f: any) => f.id === templateOption.id);
+    if (!alreadyCached) {
       setDisableSelectTemplate(true);
-      fetch(
-        UrlConstant.QUERY_TEMPLATE_BY_ID +
-          data.selectedOptions[data.selectedOptions.length - 1][
-            "id"
-          ].toString(),
-        {
-          mode: "cors",
-          credentials: "include",
-        },
-      )
+      fetch(UrlConstant.QUERY_TEMPLATE_BY_ID + templateOption.id.toString(), {
+        mode: "cors",
+        credentials: "include",
+      })
         .then((res) => res.json())
         .then((result) => {
-          templateFormProp.push(result[0]);
-          setOpenPopover(false);
-          setFormData(templateFormProp);
-          let found = false;
-          for (let j = 0; j < formData.length; j++) {
-            if (formData[j]["id"] === result[0]["id"]) {
-              found = true;
-            }
+          if (result && result.length > 0) {
+            setFormData((prev: any) => {
+              if (prev.some((f: any) => f.id === result[0].id)) return prev;
+              return [...prev, result[0]];
+            });
           }
-          if (found === false) {
-            formData.push(result[0]);
-            dataset[result["header"]] = {};
-            setFormData(formData);
-          }
+          setDisableSelectTemplate(false);
+        })
+        .catch(() => {
           setDisableSelectTemplate(false);
         });
     }
+  };
+
+  const removeTemplateInstance = (instanceId: string) => {
+    setSelectedTemplates((prev) => {
+      const idx = prev.findIndex((t) => t.instanceId === instanceId);
+      if (idx === -1) return prev;
+      const instance = prev[idx];
+      const next = prev.filter((t) => t.instanceId !== instanceId);
+      setDataset((d: any) => {
+        const newD = { ...d };
+        if (newD[instance.objKey]) {
+          newD[instance.objKey] = {
+            ...newD[instance.objKey],
+            isDeleted: true,
+            deletedDate: new Date().toISOString(),
+          };
+        }
+        next.forEach((t, i) => {
+          if (newD[t.objKey]) {
+            newD[t.objKey] = { ...newD[t.objKey], tabOrder: i };
+          }
+        });
+        return newD;
+      });
+      return next;
+    });
+  };
+
+  const reorderTemplates = (dragIndex: number, dropIndex: number) => {
+    if (dragIndex === dropIndex) return;
+    setSelectedTemplates((prev) => {
+      const next = [...prev];
+      const [removed] = next.splice(dragIndex, 1);
+      next.splice(dropIndex, 0, removed);
+      setDataset((d: any) => {
+        const newD = { ...d };
+        next.forEach((t, idx) => {
+          if (newD[t.objKey]) {
+            newD[t.objKey] = { ...newD[t.objKey], tabOrder: idx };
+          }
+        });
+        return newD;
+      });
+      return next;
+    });
+  };
+
+  const handleTemplatePickerSelect: TagPickerProps["onOptionSelect"] = (
+    _,
+    data: any,
+  ) => {
+    const current = selectedTemplatesRef.current;
+    const next = (data.selectedOptions || []) as any[];
+    const nextIds = new Set(next.map((o: any) => o.instanceId).filter(Boolean));
+
+    if (next.length < current.length) {
+      const removed = current.find((t) => !nextIds.has(t.instanceId));
+      if (removed) {
+        removeTemplateInstance(removed.instanceId);
+      }
+      return;
+    }
+
+    if (next.length > current.length) {
+      const added = next.find((o: any) => !o.instanceId);
+      if (added) {
+        addTemplateInstance(added);
+      } else if (data.value) {
+        addTemplateInstance(data.value);
+      }
+      return;
+    }
+  };
+
+  const handleDelete = (instanceId: string) => {
+    removeTemplateInstance(instanceId);
   };
 
   const onTagClick: TagPickerProps["onOptionSelect"] = (_, data) => {
@@ -262,68 +347,6 @@ export const AddSow = (): JSX.Element => {
     setDataset(dataset);
     setIsInputFocused(true);
     setSelectCount((prev) => prev + 1);
-  };
-
-  const handleAddOption = (newOption: any) => {
-    setDisableSelectTemplate(true);
-    fetch(UrlConstant.QUERY_TEMPLATE_BY_ID + newOption.id.toString(), {
-      mode: "cors",
-      credentials: "include",
-    })
-      .then((res) => res.json())
-      .then((result) => {
-        if (result && result.length > 0) {
-          const uniqueId = Date.now(); // or use a library like uuid
-          const objKey =
-            result[0].header + "#" + result[0].id + "#" + uniqueId.toString();
-          const newTemplate = {
-            ...result[0],
-            // key: `${result[0].id}_${Date.now()}`, // Add a unique key
-            objKey: objKey, // Set the header to the unique ID
-            TemplateId: result[0].id, // Add TemplateId
-            TemplateHeader: result[0].header, // Add TemplateHeader
-          };
-
-          setFormData((prevFormData: any) => [...prevFormData, newTemplate]);
-
-          setDataset((prevDataset: any) => ({
-            ...prevDataset,
-            // [newTemplate.id]: prevDataset[newTemplate.header] || {}
-            [objKey]: {
-              ...prevDataset[newTemplate.header], // Spread existing data if any
-              TemplateId: result[0].id, // Add TemplateId
-              TemplateHeader: result[0].header, // Add TemplateHeader
-              objKey: objKey, // Add TemplateHeader
-            },
-          }));
-
-          setDisableSelectTemplate(false);
-          setOpenPopover(false);
-        }
-      })
-      .catch((error) => {
-        console.error("Error fetching template:", error);
-      });
-  };
-
-  const handleRemoveOption = (removedOption: any) => {
-    setFormData((prevFormData: any) =>
-      prevFormData.filter((item: any) => item.key !== removedOption.key),
-    );
-
-    setDataset((prevDataset: any) => {
-      const newDataset = { ...prevDataset };
-      // Only remove the dataset entry if there are no more instances of this template
-      if (
-        !selectedOptions.some(
-          (option: any) =>
-            option.id === removedOption.id && option.key !== removedOption.key,
-        )
-      ) {
-        delete newDataset[removedOption.header];
-      }
-      return newDataset;
-    });
   };
 
   const text_box_change_event = (
@@ -392,12 +415,6 @@ export const AddSow = (): JSX.Element => {
     setIsOpen(true);
   };
 
-  const handleTagRemove = (tagToRemove: any) => {
-    setSelectedOptions((prev: any) =>
-      prev.filter((tag: any) => tag.id !== tagToRemove.id),
-    );
-  };
-
   const { dispatchToast } = useToastController("toast");
 
   const notify = () => {
@@ -406,35 +423,6 @@ export const AddSow = (): JSX.Element => {
         <ToastTitle>Record added successfully.</ToastTitle>
       </Toast>,
       { intent: "success" },
-    );
-  };
-
-  function extractTemplateKey(input: string) {
-    const parts = input.split("#");
-    return parts[0].trim(); // Return the first part, trimmed of whitespace
-  }
-
-  const handleDelete = (templateKey: string) => {
-    setDataset((prevDataset: any) => {
-      const newDataset = { ...prevDataset };
-
-      if (newDataset[templateKey]) {
-        newDataset[templateKey] = {
-          ...newDataset[templateKey],
-          isDeleted: true,
-          deletedDate: new Date().toISOString(),
-        };
-      }
-
-      return newDataset;
-    });
-
-    setSelectedOptions((prev: any) =>
-      prev.filter((option: any) => option.objKey !== templateKey),
-    );
-
-    setFormData((prevFormData: any) =>
-      prevFormData.filter((item: any) => item.objKey !== templateKey),
     );
   };
 
@@ -573,26 +561,33 @@ export const AddSow = (): JSX.Element => {
                   <TagPicker
                     size="medium"
                     appearance="outline"
-                    onOptionSelect={onOptionSelect}
-                    selectedOptions={selectedOptions}
+                    onOptionSelect={handleTemplatePickerSelect}
+                    selectedOptions={
+                      selectedTemplates.map((t) => ({
+                        id: t.templateId,
+                        header: t.header,
+                        instanceId: t.instanceId,
+                        key: t.instanceId,
+                      })) as any
+                    }
                   >
                     <TagPickerControl>
                       <TagPickerGroup>
-                        {selectedOptions.map((option: any, index: number) => (
+                        {selectedTemplates.map((instance) => (
                           <Tag
                             style={{ fontSize: 12 }}
-                            key={option.key || `${option.id}-${index}`}
+                            key={instance.instanceId}
                             shape="circular"
+                            dismissible
                             media={
                               <Avatar
                                 aria-hidden
-                                name={option.header}
+                                name={instance.header}
                                 color="colorful"
                               />
                             }
-                            value={option}
                           >
-                            {option.header.replace(/_/g, " ")}
+                            {instance.header.replace(/_/g, " ")}
                           </Tag>
                         ))}
                       </TagPickerGroup>
@@ -613,11 +608,8 @@ export const AddSow = (): JSX.Element => {
                                   color="colorful"
                                 />
                               }
-                              value={{
-                                ...option,
-                                key: `${option.id}-${Date.now()}`,
-                              }}
-                              key={`${option.id}-${Date.now()}`}
+                              value={option}
+                              key={option.id}
                             >
                               {option && option.header
                                 ? option.header.replace(/_/g, " ")
@@ -664,106 +656,79 @@ export const AddSow = (): JSX.Element => {
               {!disableSelectTemplate && (
                 <Tabs style={{ marginTop: 20 }}>
                   <TabList>
-                    {Object.entries(dataset).map(([key, value], index) => {
-                      if (
-                        typeof value === "object" &&
-                        value !== null &&
-                        "TemplateId" in value &&
-                        !(value as any)["isDeleted"]
-                      ) {
-                        const datasetItem = value as {
-                          TemplateId?: number;
-                          id?: number;
-                          TemplateHeader?: string;
-                          objKey?: string;
-                        };
+                    {selectedTemplates.map((instance, index) => {
+                      const matchingFormDataItem = formData.find(
+                        (formItem: any) => formItem.id === instance.templateId,
+                      );
 
-                        if (datasetItem.TemplateId) {
-                          const matchingFormDataItem = formData.find(
-                            (formItem: any) =>
-                              formItem.id === datasetItem.TemplateId,
-                          );
+                      if (!matchingFormDataItem) return null;
 
-                          if (matchingFormDataItem) {
-                            return (
-                              <React.Fragment
-                                key={`${datasetItem.id}-${index}`}
-                              >
-                                <Tab key={`tab-${datasetItem.id}-${index}`}>
-                                  <strong>
-                                    <DocumentContract16Regular />
-                                    {datasetItem.TemplateHeader?.replace(
-                                      /_/g,
-                                      " ",
-                                    ).replace("Template", "")}
-                                  </strong>
-                                  <button
-                                    onClick={() =>
-                                      handleDelete(datasetItem.objKey || "")
-                                    }
-                                    aria-label="Delete tab"
-                                    style={{
-                                      background: "none",
-                                      border: "none",
-                                      cursor: "pointer",
-                                    }}
-                                  >
-                                    <XIcon fill="red" />{" "}
-                                    {/* Make the icon red */}
-                                  </button>
-                                </Tab>
-                              </React.Fragment>
-                            );
-                          }
-                        }
-                      }
-                      return null;
+                      return (
+                        <React.Fragment key={instance.instanceId}>
+                          <Tab
+                            draggable
+                            onDragStart={(e) => {
+                              e.dataTransfer.setData(
+                                "text/plain",
+                                String(index),
+                              );
+                              e.dataTransfer.effectAllowed = "move";
+                            }}
+                            onDragOver={(e) => e.preventDefault()}
+                            onDrop={(e) => {
+                              e.preventDefault();
+                              const dragIndex = Number(
+                                e.dataTransfer.getData("text/plain"),
+                              );
+                              reorderTemplates(dragIndex, index);
+                            }}
+                          >
+                            <strong>
+                              <DocumentContract16Regular />
+                              {instance.header
+                                ?.replace(/_/g, " ")
+                                .replace("Template", "")}
+                            </strong>
+                            <button
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                handleDelete(instance.instanceId);
+                              }}
+                              aria-label="Delete tab"
+                              style={{
+                                background: "none",
+                                border: "none",
+                                cursor: "pointer",
+                              }}
+                            >
+                              <XIcon fill="red" />
+                            </button>
+                          </Tab>
+                        </React.Fragment>
+                      );
                     })}
                   </TabList>
 
-                  {Object.entries(dataset).map(([key, value], index) => {
-                    // Type guard to check if value has a TemplateId
-                    if (
-                      typeof value === "object" &&
-                      value !== null &&
-                      "TemplateId" in value &&
-                      !(value as any)["isDeleted"]
-                    ) {
-                      const datasetItem = value as {
-                        TemplateId?: number;
-                        id?: number;
-                      };
+                  {selectedTemplates.map((instance) => {
+                    const matchingFormDataItem = formData.find(
+                      (formItem: any) => formItem.id === instance.templateId,
+                    );
 
-                      // Check if the TemplateId is defined
-                      if (datasetItem.TemplateId) {
-                        // Find the matching object in formdata by TemplateId
-                        const matchingFormDataItem = formData.find(
-                          (formItem: any) =>
-                            formItem.id === datasetItem.TemplateId,
-                        );
+                    if (!matchingFormDataItem) return null;
 
-                        // If a matching form data item is found, render TabPanel
-                        if (matchingFormDataItem) {
-                          return (
-                            <React.Fragment key={`${datasetItem.id}-${index}`}>
-                              <TabPanel
-                                key={`tabpanel-${datasetItem.id}-${index}`}
-                                style={{ padding: 20 }}
-                              >
-                                <NestedForm
-                                  schema={matchingFormDataItem} // Pass the matched form data item as schema
-                                  screenname={screenname}
-                                  formvalue={dataset}
-                                  formData={datasetItem}
-                                  onCloseDrawer={handleToggleDrawer}
-                                />
-                              </TabPanel>
-                            </React.Fragment>
-                          );
-                        }
-                      }
-                    }
-                    return null; // Return null if no TemplateId is found or no matching form data item
+                    return (
+                      <React.Fragment key={instance.instanceId}>
+                        <TabPanel style={{ padding: 20 }}>
+                          <NestedForm
+                            schema={matchingFormDataItem}
+                            screenname={screenname}
+                            formvalue={dataset}
+                            formData={dataset[instance.objKey]}
+                            onCloseDrawer={handleToggleDrawer}
+                          />
+                        </TabPanel>
+                      </React.Fragment>
+                    );
                   })}
                 </Tabs>
               )}
@@ -955,7 +920,32 @@ export const AddSow = (): JSX.Element => {
               <Button
                 size="medium"
                 icon={<DocumentPdf24Regular />}
-                onClick={() => handleExportPdf(dataset)}
+                onClick={() => {
+                  const ordered: any = {};
+                  Object.entries(dataset).forEach(([key, value]) => {
+                    if (
+                      typeof value !== "object" ||
+                      value === null ||
+                      !("TemplateId" in value)
+                    ) {
+                      ordered[key] = value;
+                    }
+                  });
+                  const templates = Object.entries(dataset).filter(
+                    ([, value]) =>
+                      typeof value === "object" &&
+                      value !== null &&
+                      "TemplateId" in value &&
+                      !(value as any).isDeleted,
+                  ) as [string, any][];
+                  templates.sort(
+                    (a, b) => (a[1].tabOrder ?? 0) - (b[1].tabOrder ?? 0),
+                  );
+                  templates.forEach(([key, value]) => {
+                    ordered[key] = value;
+                  });
+                  handleExportPdf(ordered);
+                }}
                 style={{ marginRight: 5 }}
               ></Button>
               {/* <Button size="medium" icon={<DocumentData24Filled />} onClick={() => ExportToCSV_SOW(formdata)}></Button> */}
