@@ -31,6 +31,13 @@ import { Label, makeStyles, Text, Input } from "@fluentui/react-components";
 import { SearchRegular } from "@fluentui/react-icons";
 
 const useStyles = makeStyles({
+  root: {
+    display: "flex",
+    flexDirection: "row",
+    height: "100%",
+    width: "100%",
+    overflow: "hidden",
+  },
   flowContainer: {
     flex: 1,
     minWidth: 0,
@@ -38,6 +45,7 @@ const useStyles = makeStyles({
     border: "1px solid #e0e0e0",
     borderRadius: "8px",
     background: "#fafafa",
+    position: "relative" as const,
   },
   detailPanel: {
     width: "280px",
@@ -631,162 +639,172 @@ function TemplateFlowInner({
   }, [filteredGroups, activeTab]);
 
   return (
-    <div style={{ display: "flex", height: "100%", width: "100%" }}>
-      <div className={styles.wrapper}>
-        {/* Flow canvas — takes remaining space */}
-        <div style={{ position: "relative", flex: 1, minWidth: 0 }}>
-          <div className={styles.flowContainer} ref={flowRef}>
-            <ReactFlow
-              nodes={nodes}
-              edges={edges}
-              onNodesChange={disabled ? undefined : onNodesChange}
-              onEdgesChange={disabled ? undefined : onEdgesChange}
-              onConnect={disabled ? undefined : onConnect}
-              onNodeClick={disabled ? undefined : onNodeClick}
-              onNodeDragStop={disabled ? undefined : onNodeDragStop}
-              onDragOver={disabled ? undefined : onDragOver}
-              onDrop={disabled ? undefined : onDrop}
-              nodeTypes={nodeTypes}
-              nodesDraggable={!disabled}
-              nodesConnectable={!disabled}
-              fitView
-              snapToGrid
-              snapGrid={[10, 10]}
-            >
-              <Background gap={16} />
-              <Controls />
-              <MiniMap nodeStrokeWidth={3} zoomable pannable />
-              <Panel position="top-left">
-                <div>
-                  <Text weight="semibold" size={400}>
-                    Template Structure
-                  </Text>
-                  {!disabled && (
-                    <>
-                      <div className={styles.dragHint}>
-                        Drag a node onto another to reparent
-                      </div>
-                      <div className={styles.dragHint}>
-                        Drag palette items into the flow &bull; Click ✕ to
-                        remove
-                      </div>
-                    </>
-                  )}
-                  {dragMsg && (
-                    <div
-                      style={{
-                        marginTop: 4,
-                        color: dragMsg.includes("removed")
-                          ? "#c62828"
-                          : "#2e7d32",
-                        fontSize: 12,
-                        fontWeight: 600,
-                      }}
-                    >
-                      {dragMsg}
-                    </div>
-                  )}
-                </div>
-              </Panel>
-            </ReactFlow>
-          </div>
-
-          {/* Disabled overlay */}
-          {disabled && (
-            <div
-              style={{
-                position: "absolute",
-                top: 0,
-                left: 0,
-                right: 0,
-                bottom: 0,
-                background: "rgba(255,255,255,0.7)",
-                borderRadius: "8px",
-                display: "flex",
-                alignItems: "center",
-                justifyContent: "center",
-                zIndex: 10,
-                backdropFilter: "blur(2px)",
-              }}
-            >
-              <div
-                style={{
-                  background: "#fff",
-                  padding: "28px 40px",
-                  borderRadius: "12px",
-                  boxShadow: "0 4px 20px rgba(0,0,0,0.1)",
-                  textAlign: "center",
-                }}
-              >
-                <div style={{ fontSize: 36, marginBottom: 8 }}>📋</div>
+    <div className={styles.root}>
+      {/* Flow canvas — left side, takes remaining space */}
+      <div className={styles.flowContainer} ref={flowRef}>
+        <ReactFlow
+          nodes={nodes}
+          edges={edges}
+          onNodesChange={disabled ? undefined : onNodesChange}
+          onEdgesChange={disabled ? undefined : onEdgesChange}
+          onConnect={disabled ? undefined : onConnect}
+          onNodeClick={disabled ? undefined : onNodeClick}
+          onNodeDragStop={disabled ? undefined : onNodeDragStop}
+          onDragOver={disabled ? undefined : onDragOver}
+          onDrop={disabled ? undefined : onDrop}
+          nodeTypes={nodeTypes}
+          nodesDraggable={!disabled}
+          nodesConnectable={!disabled}
+          fitView
+          snapToGrid
+          snapGrid={[10, 10]}
+        >
+          <Background gap={16} />
+          <Controls />
+          <MiniMap nodeStrokeWidth={3} zoomable pannable />
+          <Panel position="top-left">
+            <div>
+              <Text weight="semibold" size={400}>
+                Template Structure
+              </Text>
+              {!disabled && (
+                <>
+                  <div className={styles.dragHint}>
+                    Drag a node onto another to reparent
+                  </div>
+                  <div className={styles.dragHint}>
+                    Drag palette items into the flow &bull; Click ✕ to remove
+                  </div>
+                </>
+              )}
+              {dragMsg && (
                 <div
                   style={{
-                    fontWeight: 700,
-                    fontSize: 16,
-                    color: "#333",
-                    marginBottom: 4,
+                    marginTop: 4,
+                    color: dragMsg.includes("removed") ? "#c62828" : "#2e7d32",
+                    fontSize: 12,
+                    fontWeight: 600,
                   }}
                 >
-                  Save Template First
+                  {dragMsg}
                 </div>
-                <div style={{ fontSize: 13, color: "#666", maxWidth: 260 }}>
-                  Save your template name &amp; description to start building
-                  the structure
-                </div>
-              </div>
+              )}
             </div>
-          )}
-        </div>
+          </Panel>
+        </ReactFlow>
 
-        {/* Right panel — tabbed + searchable palette */}
-        <div
-          className={styles.detailPanel}
-          style={
-            disabled ? { opacity: 0.45, pointerEvents: "none" } : undefined
-          }
-        >
-          <Label weight="semibold" size="large" style={{ marginBottom: 4 }}>
-            Object Palette
-          </Label>
-          <Text size={200} style={{ color: "#666", marginBottom: 10 }}>
-            Drag items into the flow
-          </Text>
-
-          <div className={styles.searchBox}>
-            <Input
-              placeholder="Search objects..."
-              value={searchQuery}
-              onChange={(e: any) => setSearchQuery(e.target.value)}
-              contentBefore={
-                <SearchRegular style={{ fontSize: 14, color: "#888" }} />
-              }
+        {/* Disabled overlay */}
+        {disabled && (
+          <div
+            style={{
+              position: "absolute",
+              top: 0,
+              left: 0,
+              right: 0,
+              bottom: 0,
+              background: "rgba(255,255,255,0.7)",
+              borderRadius: "8px",
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "center",
+              zIndex: 10,
+              backdropFilter: "blur(2px)",
+            }}
+          >
+            <div
               style={{
-                width: "100%",
-                border: "1px solid #ccc",
-                borderRadius: "6px",
+                background: "#fff",
+                padding: "28px 40px",
+                borderRadius: "12px",
+                boxShadow: "0 4px 20px rgba(0,0,0,0.1)",
+                textAlign: "center",
               }}
-            />
-          </div>
-
-          {paletteItems.length === 0 ? (
-            <div className={styles.noResults}>No palette items available</div>
-          ) : (
-            <>
-              {/* Category tabs */}
+            >
+              <div style={{ fontSize: 36, marginBottom: 8 }}>📋</div>
               <div
                 style={{
-                  display: "flex",
-                  gap: 4,
-                  marginBottom: 10,
-                  borderBottom: "1px solid #e0e0e0",
-                  paddingBottom: 6,
-                  overflowX: "auto" as const,
-                  flexWrap: "nowrap" as const,
-                  whiteSpace: "nowrap" as const,
+                  fontWeight: 700,
+                  fontSize: 16,
+                  color: "#333",
+                  marginBottom: 4,
                 }}
               >
+                Save Template First
+              </div>
+              <div style={{ fontSize: 13, color: "#666", maxWidth: 260 }}>
+                Save your template name &amp; description to start building the
+                structure
+              </div>
+            </div>
+          </div>
+        )}
+      </div>
+
+      {/* Right panel — tabbed + searchable palette */}
+      <div
+        className={styles.detailPanel}
+        style={disabled ? { opacity: 0.45, pointerEvents: "none" } : undefined}
+      >
+        <Label weight="semibold" size="large" style={{ marginBottom: 4 }}>
+          Object Palette
+        </Label>
+        <Text size={200} style={{ color: "#666", marginBottom: 10 }}>
+          Drag items into the flow
+        </Text>
+
+        <div className={styles.searchBox}>
+          <Input
+            placeholder="Search objects..."
+            value={searchQuery}
+            onChange={(e: any) => setSearchQuery(e.target.value)}
+            contentBefore={
+              <SearchRegular style={{ fontSize: 14, color: "#888" }} />
+            }
+            style={{
+              width: "100%",
+              border: "1px solid #ccc",
+              borderRadius: "6px",
+            }}
+          />
+        </div>
+
+        {paletteItems.length === 0 ? (
+          <div className={styles.noResults}>No palette items available</div>
+        ) : (
+          <>
+            {/* Category tabs */}
+            <div
+              style={{
+                display: "flex",
+                gap: 4,
+                marginBottom: 10,
+                borderBottom: "1px solid #e0e0e0",
+                paddingBottom: 6,
+                overflowX: "auto" as const,
+                flexWrap: "nowrap" as const,
+                whiteSpace: "nowrap" as const,
+              }}
+            >
+              <button
+                onClick={() => setActiveTab("All")}
+                style={{
+                  padding: "5px 12px",
+                  borderRadius: "16px",
+                  border: "none",
+                  cursor: "pointer",
+                  fontSize: 12,
+                  fontWeight: 600,
+                  background: activeTab === "All" ? "#1976d2" : "transparent",
+                  color: activeTab === "All" ? "#fff" : "#1976d2",
+                  transition: "all 0.15s",
+                }}
+              >
+                All
+              </button>
+              {filteredGroups.map((group) => (
                 <button
-                  onClick={() => setActiveTab("All")}
+                  key={group.title}
+                  onClick={() => setActiveTab(group.title)}
                   style={{
                     padding: "5px 12px",
                     borderRadius: "16px",
@@ -794,77 +812,56 @@ function TemplateFlowInner({
                     cursor: "pointer",
                     fontSize: 12,
                     fontWeight: 600,
-                    background: activeTab === "All" ? "#1976d2" : "transparent",
-                    color: activeTab === "All" ? "#fff" : "#1976d2",
+                    background:
+                      activeTab === group.title ? group.color : "transparent",
+                    color: activeTab === group.title ? "#fff" : group.color,
                     transition: "all 0.15s",
                   }}
                 >
-                  All
+                  {group.title}
                 </button>
-                {filteredGroups.map((group) => (
-                  <button
-                    key={group.title}
-                    onClick={() => setActiveTab(group.title)}
-                    style={{
-                      padding: "5px 12px",
-                      borderRadius: "16px",
-                      border: "none",
-                      cursor: "pointer",
-                      fontSize: 12,
-                      fontWeight: 600,
-                      background:
-                        activeTab === group.title ? group.color : "transparent",
-                      color: activeTab === group.title ? "#fff" : group.color,
-                      transition: "all 0.15s",
+              ))}
+            </div>
+
+            {filteredGroups.length === 0 && (
+              <div className={styles.noResults}>No matching objects</div>
+            )}
+
+            {activeGroup && (
+              <div style={{ overflowY: "auto", flex: 1, minHeight: 0 }}>
+                {activeGroup.items.map((obj: any, idx: number) => (
+                  <div
+                    key={`palette-${obj.UniqueID || obj.id || "item"}-${idx}`}
+                    draggable={!disabled}
+                    onDragStart={(e) => {
+                      if (disabled) return;
+                      e.dataTransfer.setData(
+                        "application/json",
+                        JSON.stringify(obj),
+                      );
+                      e.dataTransfer.effectAllowed = "move";
                     }}
+                    className={styles.paletteItem}
+                    style={
+                      disabled
+                        ? { opacity: 0.5, cursor: "not-allowed" }
+                        : undefined
+                    }
                   >
-                    {group.title}
-                  </button>
+                    <div style={{ fontWeight: 600, color: "#222" }}>
+                      {obj.header || obj.name || "Untitled"}
+                    </div>
+                    <div style={{ fontSize: 11, color: "#888", marginTop: 2 }}>
+                      {obj.inputType || obj.node_type}
+                      {obj.choices?.length > 0 &&
+                        ` • ${obj.choices.length} options`}
+                    </div>
+                  </div>
                 ))}
               </div>
-
-              {filteredGroups.length === 0 && (
-                <div className={styles.noResults}>No matching objects</div>
-              )}
-
-              {activeGroup && (
-                <div style={{ overflowY: "auto", flex: 1, minHeight: 0 }}>
-                  {activeGroup.items.map((obj: any, idx: number) => (
-                    <div
-                      key={`palette-${obj.UniqueID || obj.id || "item"}-${idx}`}
-                      draggable={!disabled}
-                      onDragStart={(e) => {
-                        if (disabled) return;
-                        e.dataTransfer.setData(
-                          "application/json",
-                          JSON.stringify(obj),
-                        );
-                        e.dataTransfer.effectAllowed = "move";
-                      }}
-                      className={styles.paletteItem}
-                      style={
-                        disabled
-                          ? { opacity: 0.5, cursor: "not-allowed" }
-                          : undefined
-                      }
-                    >
-                      <div style={{ fontWeight: 600, color: "#222" }}>
-                        {obj.header || obj.name || "Untitled"}
-                      </div>
-                      <div
-                        style={{ fontSize: 11, color: "#888", marginTop: 2 }}
-                      >
-                        {obj.inputType || obj.node_type}
-                        {obj.choices?.length > 0 &&
-                          ` • ${obj.choices.length} options`}
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              )}
-            </>
-          )}
-        </div>
+            )}
+          </>
+        )}
       </div>
 
       {/* Detail modal */}
