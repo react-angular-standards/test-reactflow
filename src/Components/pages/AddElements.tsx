@@ -200,7 +200,7 @@ export const AddElements = (): JSX.Element => {
       });
   }, []);
 
-  const isTemplateSaved = !!(templateObject as any).id;
+  const isTemplateSaved = !!templateObject?.id;
 
   const save_template = () => {
     setSaveButtonLoading(true);
