@@ -285,6 +285,16 @@ export const AddElements = (): JSX.Element => {
       },
       body: JSON.stringify(templateObject),
     })
+      .then(() => {
+        return fetch(UrlConstant.MANAGE_SAVE_TEMPLATE + "Template", {
+          method: "post",
+          headers: {
+            Accept: "application/json",
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify(templateObject),
+        });
+      })
       .then((res) => res.json())
       .then((result) => {
         setDisableSave(true);
