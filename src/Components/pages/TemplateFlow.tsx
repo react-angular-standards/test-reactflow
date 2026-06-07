@@ -32,15 +32,17 @@ import { SearchRegular } from "@fluentui/react-icons";
 
 const useStyles = makeStyles({
   flowContainer: {
-    width: "100%",
+    flex: 1,
+    minWidth: 0,
     height: "100%",
     border: "1px solid #e0e0e0",
     borderRadius: "8px",
     background: "#fafafa",
   },
   detailPanel: {
-    width: "300px",
-    padding: "16px",
+    width: "280px",
+    minWidth: "280px",
+    padding: "14px",
     background: "#fff",
     borderLeft: "1px solid #e0e0e0",
     overflowY: "auto" as const,
@@ -51,7 +53,8 @@ const useStyles = makeStyles({
   wrapper: {
     display: "flex",
     gap: "0px",
-    marginTop: "12px",
+    height: "100%",
+    width: "100%",
   },
   fieldRow: {
     marginBottom: "10px",
@@ -628,7 +631,7 @@ function TemplateFlowInner({
   }, [filteredGroups, activeTab]);
 
   return (
-    <div>
+    <div style={{ display: "flex", height: "100%", width: "100%" }}>
       <div className={styles.wrapper}>
         {/* Flow canvas — takes remaining space */}
         <div style={{ position: "relative", flex: 1, minWidth: 0 }}>
