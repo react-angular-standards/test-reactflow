@@ -1,37 +1,19 @@
 // @ts-nocheck
 /**
- * @file Acme Detailed view
- * @author Gopinath Rajgopal
- * @copyright
- *   Company ,  and/or
- *     Copyright (c) 2023 The Company Company
- *     Unpublished Work - All Rights Reserved
- *   Third Party Disclosure Requires Written Approval
+ * @file Template Builder — Add / Edit
  */
-import React from "react";
-import { useState } from "react";
-import { useParams, useHistory } from "react-router-dom";
+import React, { useState, useCallback } from "react";
+import { useParams } from "react-router-dom";
 import {
   Home20Regular,
-  Calendar20Filled,
   AddCircle20Filled,
   Save20Regular,
-  DocumentAdd20Regular,
   Status20Filled,
   Calendar20Regular,
-  DocumentPdf24Regular,
-  DocumentData24Filled,
-  Delete24Filled,
   Fluid16Regular,
 } from "@fluentui/react-icons";
 import { UrlConstant } from "../Util/UrlConstants";
-import {
-  TagIcon,
-  WorkflowIcon,
-  PeopleIcon,
-  CalendarIcon,
-  DownloadIcon,
-} from "@primer/octicons-react";
+import { TagIcon, PeopleIcon } from "@primer/octicons-react";
 
 import {
   Skeleton,
@@ -41,16 +23,13 @@ import {
   BreadcrumbButton,
   BreadcrumbDivider,
   BreadcrumbItem,
-  DialogTitle,
   Field,
   Input,
   Label,
-  Link,
   makeStyles,
   MessageBar,
   MessageBarBody,
   MessageBarTitle,
-  shorthands,
   Tag,
   TagPicker,
   TagPickerControl,
@@ -59,55 +38,51 @@ import {
   TagPickerList,
   TagPickerOption,
   Textarea,
-  tokens,
   Select,
   TagPickerProps,
-  Tooltip,
   Button,
   Spinner,
 } from "@fluentui/react-components";
 
 import { IFieldType } from "./Requirementobject";
-// import ReactHierarchy from "../HierarchyNode/ReactHierarchy";
-import Autocomplete from "@mui/material/Autocomplete";
-
-import TextField from "@mui/material/TextField";
-import {
-  CircularProgress,
-  Dialog,
-  DialogActions,
-  DialogContent,
-  DialogContentText,
-} from "@mui/material";
-import { selectedGridRowsSelector } from "@mui/x-data-grid";
-import { table } from "console";
-import { tr } from "date-fns/locale";
-import SelectRequirement from "./SelectRequirement";
-import { ExportToCSV_Template } from "./exportToCSV";
 import TemplateFlow from "./TemplateFlow";
 
 const useStyles = makeStyles({
-  base: {
+  root: {
     display: "flex",
     flexDirection: "column",
+    height: "100vh",
+    overflow: "hidden",
   },
-  field: {
-    display: "grid",
-    gridRowGap: tokens.spacingVerticalXXS,
-    marginTop: tokens.spacingVerticalMNudge,
-    ...shorthands.padding(tokens.spacingHorizontalMNudge),
+  headerBar: {
+    padding: "10px 16px 0",
+    flexShrink: 0,
+    background: "#fff",
+    borderBottom: "1px solid #e0e0e0",
+    zIndex: 2,
   },
-  filledLighter: {
-    backgroundColor: tokens.colorNeutralBackgroundInverted,
-    "> label": {
-      color: tokens.colorNeutralForegroundInverted2,
-    },
+  main: {
+    display: "flex",
+    flex: 1,
+    overflow: "hidden",
+    minHeight: 0,
   },
-  filledDarker: {
-    backgroundColor: tokens.colorNeutralBackgroundInverted,
-    "> label": {
-      color: tokens.colorNeutralForegroundInverted2,
-    },
+  flowArea: {
+    flex: 1,
+    minWidth: 0,
+    overflow: "hidden",
+    position: "relative",
+  },
+  sidebar: {
+    width: 280,
+    flexShrink: 0,
+    background: "#fafafa",
+    borderLeft: "1px solid #e0e0e0",
+    padding: 16,
+    overflowY: "auto",
+  },
+  skeleton: {
+    padding: 10,
   },
 });
 
@@ -129,26 +104,19 @@ const emptyfields = (): IFieldType => ({
 export const AddElements = (): JSX.Element => {
   const { screenname } = useParams<{ screenname: string }>();
   const { id } = useParams<{ id: string }>();
+  const styles = useStyles();
+
   const [templateObject, setTemplateObject] = useState<IFieldType>(emptyfields);
   const [templatearray, settemplatearray] = useState<IFieldType[]>([]);
   const [templatearray1, settemplatearray1] = useState<IFieldType[]>([]);
-  const [requirementObjectlist, setrequirementObjectList] = useState<any>([]);
-  const [loadwhileerender, setLoadwhilerender] = useState<boolean>(false);
-  const styles = useStyles();
-  const [count, setCount] = useState<number>(0);
-  const [count1, setCount1] = useState<number>(0);
-  const [disableSave, setDisableSave] = useState<boolean>(false);
+  const [requirementObjectlist, setrequirementObjectList] = useState<any[]>([]);
+  const [loadwhileerender, setLoadwhilerender] = useState(false);
+  const [disableSave, setDisableSave] = useState(false);
   const [saveButtonLoading, setSaveButtonLoading] = useState(false);
-
-  const [open, setOpen] = React.useState(false);
-  const [selectedRequirementObject, setSelectedRequirementObject] =
-    React.useState<any>({});
-
-  const [dataset, setdataset] = useState<any>({});
-  const [dataset1, setdataset1] = useState<any>({});
-  const [selectcount, setSelectCount] = useState<number>(0);
-  const [inputRef, setInputFocus] = useState<boolean>(false);
-  const [tags, setTags] = useState<any>([]);
+  const [tags, setTags] = useState<any[]>([]);
+  const [errorMsg, setErrorMsg] = useState("");
+  const [successMsg, setSuccessMsg] = useState("");
+  const [pickerKey, setPickerKey] = useState(0);
 
   React.useEffect(() => {
     setLoadwhilerender(true);
@@ -157,9 +125,9 @@ export const AddElements = (): JSX.Element => {
       credentials: "include",
     })
       .then((res) => res.json())
-      .then((result) => {
-        setTags(result);
-      });
+      .then(setTags)
+      .catch(() => setTags([]));
+
     if (id != undefined) {
       fetch(UrlConstant.QUERY_TEMPLATE_BY_ID + id, {
         mode: "cors",
@@ -170,12 +138,14 @@ export const AddElements = (): JSX.Element => {
           settemplatearray1(result);
           settemplatearray(result);
           setTemplateObject(result[0]);
-          setLoadwhilerender(false);
-        });
+        })
+        .catch(() => setErrorMsg("Failed to load template."))
+        .finally(() => setLoadwhilerender(false));
     } else {
       setLoadwhilerender(false);
     }
-    let temptemplateObjectlist: any = [];
+
+    let temptemplateObjectlist: any[] = [];
     fetch(UrlConstant.QUERY_TEMPLATE_OBJECT + "RequirementObject", {
       mode: "cors",
       credentials: "include",
@@ -183,27 +153,52 @@ export const AddElements = (): JSX.Element => {
       .then((res) => res.json())
       .then((result) => {
         temptemplateObjectlist = result;
-
-        fetch(UrlConstant.QUERY_TEMPLATE_OBJECT + "Template", {
+        return fetch(UrlConstant.QUERY_TEMPLATE_OBJECT + "Template", {
           mode: "cors",
           credentials: "include",
-        })
-          .then((res) => res.json())
-          .then((result) => {
-            for (let i = 0; i < result.length; i++) {
-              result[i]["type"] = "template";
-              temptemplateObjectlist.push(result[i]);
-            }
-
-            setrequirementObjectList(temptemplateObjectlist);
-          });
-      });
+        });
+      })
+      .then((res) => res.json())
+      .then((result) => {
+        for (let i = 0; i < result.length; i++) {
+          result[i]["type"] = "template";
+          temptemplateObjectlist.push(result[i]);
+        }
+        setrequirementObjectList(temptemplateObjectlist);
+      })
+      .catch(() => setrequirementObjectList([]));
   }, []);
 
   const isTemplateSaved = !!templateObject?.id;
 
+  const handleSuccess = (result: any) => {
+    setDisableSave(true);
+    setSaveButtonLoading(false);
+    settemplatearray([result]);
+    settemplatearray1([result]);
+    setTemplateObject(result);
+    setSuccessMsg(
+      isTemplateSaved
+        ? `Template "${result.header}" updated successfully.`
+        : `Template "${result.header}" created successfully.`,
+    );
+    setTimeout(() => {
+      setDisableSave(false);
+      setSuccessMsg("");
+    }, 4000);
+  };
+
+  const handleError = (msg: string) => {
+    console.error(msg);
+    setErrorMsg(msg);
+    setSaveButtonLoading(false);
+    setDisableSave(false);
+    setTimeout(() => setErrorMsg(""), 5000);
+  };
+
   const save_template = () => {
     setSaveButtonLoading(true);
+    setErrorMsg("");
     fetch(UrlConstant.MANAGE_SAVE_TEMPLATE + "Template", {
       method: "post",
       headers: {
@@ -212,71 +207,17 @@ export const AddElements = (): JSX.Element => {
       },
       body: JSON.stringify(templateObject),
     })
-      .then((res) => res.json())
-      .then((result) => {
-        setDisableSave(true);
-        setSaveButtonLoading(false);
-        const temptemplatearray = [];
-        temptemplatearray?.push(result);
-        settemplatearray(temptemplatearray);
-        settemplatearray1(temptemplatearray);
-        setCount1(count1 + 1);
-        setTemplateObject(result);
-        setTimeout(() => {
-          setDisableSave(false);
-        }, 3000);
+      .then(async (res) => {
+        if (!res.ok) throw new Error("Save failed: " + res.status);
+        return res.json();
       })
-      .catch((error) => {
-        console.error("Error saving template:", error);
-        setDisableSave(false);
-        setSaveButtonLoading(false);
-      });
-  };
-
-  const delete_template = () => {
-    fetch(UrlConstant.DELETE_SAVE_TEMPLATE + "Template/" + templateObject.id, {
-      method: "get",
-      headers: {
-        Accept: "application/json",
-        "Content-Type": "application/json",
-      },
-    })
-      .then((res) => res.json())
-      .then((result) => {
-        const temptemplatearray = [];
-        temptemplatearray?.push(result);
-        settemplatearray(temptemplatearray);
-        settemplatearray1(temptemplatearray);
-        setCount1(count1 + 1);
-        setTemplateObject(result);
-      });
-  };
-
-  const handletextchange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const tempformprop: any = { ...templateObject };
-    tempformprop[e.target.name] = e.target.value;
-    setTemplateObject(tempformprop);
-
-    setCount(count + 1);
-  };
-
-  const text_area_change_event = (
-    event: React.ChangeEvent<HTMLTextAreaElement>,
-  ) => {
-    const { name, value } = event.target;
-    const tempformprop: any = { ...templateObject };
-    tempformprop[name] = value;
-    setTemplateObject(tempformprop);
-    setCount(count + 1);
-  };
-
-  const associateRequirements = (node: any) => {
-    setSelectedRequirementObject(node);
-    setOpen(true);
+      .then(handleSuccess)
+      .catch((err) => handleError(err.message || "Error saving template."));
   };
 
   const update_tempalte = () => {
     setSaveButtonLoading(true);
+    setErrorMsg("");
     fetch(UrlConstant.MANAGE_ASSOCIATE + "Template" + templateObject.id, {
       method: "post",
       headers: {
@@ -285,7 +226,8 @@ export const AddElements = (): JSX.Element => {
       },
       body: JSON.stringify(templateObject),
     })
-      .then(() => {
+      .then(async (res) => {
+        if (!res.ok) throw new Error("Associate failed: " + res.status);
         return fetch(UrlConstant.MANAGE_SAVE_TEMPLATE + "Template", {
           method: "post",
           headers: {
@@ -295,45 +237,179 @@ export const AddElements = (): JSX.Element => {
           body: JSON.stringify(templateObject),
         });
       })
-      .then((res) => res.json())
-      .then((result) => {
-        setDisableSave(true);
-        setSaveButtonLoading(false);
-        const temptemplatearray = [];
-        temptemplatearray?.push(result);
-        settemplatearray(temptemplatearray);
-        settemplatearray1(temptemplatearray);
-        setCount1(count1 + 1);
-        setTemplateObject(result);
-        setTimeout(() => {
-          setDisableSave(false);
-        }, 3000);
+      .then(async (res) => {
+        if (!res.ok) throw new Error("Save failed: " + res.status);
+        return res.json();
       })
-      .catch((error) => {
-        console.error("Error updating template:", error);
-        setDisableSave(false);
-        setSaveButtonLoading(false);
-      });
+      .then(handleSuccess)
+      .catch((err) => handleError(err.message || "Error updating template."));
+  };
+
+  const handletextchange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    setTemplateObject((prev: any) => ({
+      ...prev,
+      [e.target.name]: e.target.value,
+    }));
+  };
+
+  const text_area_change_event = (
+    event: React.ChangeEvent<HTMLTextAreaElement>,
+  ) => {
+    const { name, value } = event.target;
+    setTemplateObject((prev: any) => ({ ...prev, [name]: value }));
   };
 
   const onTagSelect: TagPickerProps["onOptionSelect"] = (e, data) => {
-    const updated: any = { ...templateObject, Tag: data.selectedOptions };
-    setTemplateObject(updated);
-    setInputFocus(true);
-    setSelectCount(selectcount + 1);
+    setTemplateObject((prev: any) => ({
+      ...prev,
+      Tag: data.selectedOptions,
+    }));
+    setPickerKey((k) => k + 1);
   };
 
-  const handleTreeChange = (tree: any) => {
+  const handleTreeChange = useCallback((tree: any) => {
     setTemplateObject(tree);
     settemplatearray([tree]);
-  };
+  }, []);
+
+  /* ── Render helpers ─────────────────────────────────────────────── */
+
+  const StatusField = () => (
+    <div style={{ marginBottom: 16 }}>
+      <span
+        style={{
+          textDecoration: "none",
+          display: "block",
+          marginBottom: 8,
+          fontWeight: 600,
+        }}
+      >
+        <Status20Filled /> Status
+      </span>
+      <Select
+        disabled={templateObject.isDeleted}
+        value={templateObject.status || "Draft"}
+        appearance="filled-darker"
+        name="status"
+        onChange={(e: any) =>
+          setTemplateObject((prev: any) => ({
+            ...prev,
+            status: e.target.value,
+          }))
+        }
+      >
+        <option value="Draft">Draft</option>
+        <option value="Released">Released</option>
+        <option value="Closed">Closed</option>
+      </Select>
+    </div>
+  );
+
+  const MetaInfo = () => (
+    <>
+      {templateObject.Updated_by && (
+        <>
+          <div style={{ marginBottom: 16 }}>
+            <span
+              style={{
+                display: "block",
+                marginBottom: 4,
+                fontWeight: 600,
+              }}
+            >
+              <PeopleIcon /> Updated by
+            </span>
+            <span>{templateObject.Updated_by.NAME}</span>
+          </div>
+          <div style={{ marginBottom: 16 }}>
+            <span
+              style={{
+                display: "block",
+                marginBottom: 4,
+                fontWeight: 600,
+              }}
+            >
+              <Calendar20Regular /> Updated on
+            </span>
+            <span>
+              {templateObject.UPDATED_ON
+                ? new Date(templateObject.UPDATED_ON).toLocaleString()
+                : "—"}
+            </span>
+          </div>
+        </>
+      )}
+    </>
+  );
+
+  const TagField = () => (
+    <Field style={{ marginTop: 8 }}>
+      <span
+        style={{
+          textDecoration: "none",
+          display: "block",
+          marginBottom: 8,
+          fontWeight: 600,
+        }}
+      >
+        <TagIcon size={16} /> Tags
+      </span>
+      <TagPicker
+        key={pickerKey}
+        disabled={templateObject.isDeleted}
+        size="medium"
+        appearance="filled-darker"
+        onOptionSelect={onTagSelect}
+        selectedOptions={templateObject.Tag || []}
+      >
+        <TagPickerControl>
+          <TagPickerGroup>
+            {(templateObject.Tag || []).map((option: any, i: number) => (
+              <Tag
+                disabled={templateObject.isDeleted}
+                key={`tag-${option.NAME}-${i}`}
+                shape="rounded"
+                media={
+                  <Avatar aria-hidden name={option.NAME} color="colorful" />
+                }
+                value={option}
+              >
+                {option.NAME}
+              </Tag>
+            ))}
+          </TagPickerGroup>
+          <TagPickerInput aria-label="Select tags" />
+        </TagPickerControl>
+        <TagPickerList>
+          {tags.length > 0
+            ? tags.map((option: any, i: number) => (
+                <TagPickerOption
+                  media={
+                    <Avatar
+                      shape="square"
+                      aria-hidden
+                      name={option.NAME}
+                      color="colorful"
+                    />
+                  }
+                  value={option}
+                  key={`opt-${option.NAME}-${i}`}
+                >
+                  {option.NAME}
+                </TagPickerOption>
+              ))
+            : "No options available"}
+        </TagPickerList>
+      </TagPicker>
+    </Field>
+  );
 
   return (
-    <div>
+    <div className={styles.root}>
       <Breadcrumb
-        aria-label="Large breadcrumb example with buttons"
+        aria-label="Breadcrumb"
         size="small"
-        style={{ marginBottom: 20 }}
+        style={{ padding: "8px 16px", marginBottom: 0, flexShrink: 0 }}
       >
         <BreadcrumbItem>
           <BreadcrumbButton icon={<Home20Regular />}>Home</BreadcrumbButton>
@@ -349,54 +425,19 @@ export const AddElements = (): JSX.Element => {
         <BreadcrumbDivider />
         <BreadcrumbItem>
           <BreadcrumbButton icon={<AddCircle20Filled />} current>
-            ADD SOW
+            {isTemplateSaved ? "Edit Template" : "Add Template"}
           </BreadcrumbButton>
         </BreadcrumbItem>
       </Breadcrumb>
-      {loadwhileerender && (
-        <Skeleton>
-          <div className="row" style={{ padding: 10 }}>
-            <div className="col-md-12" style={{ marginBottom: 30 }}></div>
-            <div className="col-md-9">
-              <div className="row">
-                <div className="col-md-12">
-                  <span
-                    style={{
-                      textDecoration: "none",
-                      marginBottom: 10,
-                      display: "block",
-                    }}
-                  >
-                    <strong>Template Name</strong>
-                  </span>
-                  <SkeletonItem size={28} />
-                </div>
 
-                <div className="col-md-12">
-                  <Label
-                    htmlFor={"outlineId"}
-                    style={{ marginTop: 20, marginBottom: 10 }}
-                  >
-                    <strong>Description</strong>
-                  </Label>
-                  <br />
-                  <SkeletonItem size={72} />
-                </div>
-                <div
-                  className="col-md-2"
-                  style={{ marginTop: 20, marginBottom: 20 }}
-                >
-                  <SkeletonItem size={32} />
-                </div>
-              </div>
+      {loadwhileerender && (
+        <Skeleton className={styles.skeleton}>
+          <div style={{ display: "flex", gap: 20, padding: 10 }}>
+            <div style={{ flex: 1 }}>
+              <SkeletonItem size={28} style={{ marginBottom: 12 }} />
+              <SkeletonItem size={72} />
             </div>
-          </div>
-          <div className="row">
-            <div className="col-md-9">
-              <SkeletonItem size={96} />
-              <SkeletonItem size={96} />
-              <SkeletonItem size={96} />
-              <SkeletonItem size={96} />
+            <div style={{ width: 200 }}>
               <SkeletonItem size={96} />
             </div>
           </div>
@@ -405,21 +446,28 @@ export const AddElements = (): JSX.Element => {
 
       {!loadwhileerender && (
         <>
-          {/* ── Header bar: form fields + save button ─────────── */}
-          <div style={{ padding: "10px 10px 0" }}>
+          {/* ── Header bar ─────────────────────────────────────── */}
+          <div className={styles.headerBar}>
             {templateObject.isDeleted && (
-              <MessageBar
-                style={{ marginBottom: 16, color: "red", padding: 10 }}
-                intent={"error"}
-              >
-                <MessageBarBody style={{ fontSize: 14 }}>
+              <MessageBar style={{ marginBottom: 12 }} intent="error">
+                <MessageBarBody>
                   Template{" "}
-                  <MessageBarTitle style={{ fontSize: 14 }}>
-                    {templateObject.header}
-                  </MessageBarTitle>{" "}
-                  is deleted, and cannot be edited or used in any new statement
-                  of work.
+                  <MessageBarTitle>{templateObject.header}</MessageBarTitle> is
+                  deleted and cannot be edited or used in any new statement of
+                  work.
                 </MessageBarBody>
+              </MessageBar>
+            )}
+
+            {errorMsg && (
+              <MessageBar style={{ marginBottom: 12 }} intent="error">
+                <MessageBarBody>{errorMsg}</MessageBarBody>
+              </MessageBar>
+            )}
+
+            {successMsg && (
+              <MessageBar style={{ marginBottom: 12 }} intent="success">
+                <MessageBarBody>{successMsg}</MessageBarBody>
               </MessageBar>
             )}
 
@@ -428,35 +476,37 @@ export const AddElements = (): JSX.Element => {
                 display: "flex",
                 alignItems: "flex-start",
                 gap: 16,
+                paddingBottom: 10,
               }}
             >
-              {/* Left — form fields */}
               <div style={{ flex: 1, minWidth: 0 }}>
                 <div className="row">
                   <div className="col-md-5">
-                    <Label htmlFor="outlineId" style={{ marginBottom: 6 }}>
+                    <Label htmlFor="header" style={{ marginBottom: 6 }}>
                       <strong>Template Name</strong>
                     </Label>
                     <Input
+                      id="header"
                       disabled={templateObject.isDeleted}
                       style={{ width: "100%" }}
                       onChange={handletextchange}
                       appearance="filled-darker"
                       name="header"
-                      value={templateObject.header}
+                      value={templateObject.header || ""}
                     />
                   </div>
                   <div className="col-md-5">
-                    <Label htmlFor="outlineId" style={{ marginBottom: 6 }}>
+                    <Label htmlFor="description" style={{ marginBottom: 6 }}>
                       <strong>Description</strong>
                     </Label>
                     <Textarea
+                      id="description"
                       disabled={templateObject.isDeleted}
                       style={{ width: "100%" }}
                       onChange={text_area_change_event}
                       appearance="filled-darker"
                       name="description"
-                      value={templateObject.description}
+                      value={templateObject.description || ""}
                       resize="vertical"
                     />
                   </div>
@@ -488,27 +538,13 @@ export const AddElements = (): JSX.Element => {
                     </Button>
                   </div>
                 </div>
-
-                {disableSave && (
-                  <MessageBar style={{ marginTop: 10 }} intent={"success"}>
-                    <MessageBarBody>
-                      Template{" "}
-                      <MessageBarTitle>{templateObject.header}</MessageBarTitle>{" "}
-                      {isTemplateSaved
-                        ? "saved successfully!"
-                        : "created successfully!"}{" "}
-                      {!isTemplateSaved &&
-                        "Please associate necessary Requirements below."}
-                    </MessageBarBody>
-                  </MessageBar>
-                )}
               </div>
             </div>
           </div>
 
-          {/* ── Main content: Flow + sidebar ─────────────────── */}
-          <div className="row" style={{ padding: "0 10px" }}>
-            <div className="col-md-9" style={{ paddingRight: 0 }}>
+          {/* ── Main: full-screen flow + sidebar ─────────────── */}
+          <div className={styles.main}>
+            <div className={styles.flowArea}>
               <TemplateFlow
                 root={templateObject}
                 onTreeChange={handleTreeChange}
@@ -516,256 +552,15 @@ export const AddElements = (): JSX.Element => {
                 disabled={!isTemplateSaved}
               />
             </div>
-            <div className="col-md-3">
-              <div className="row">
-                <div className="col-md-12">
-                  <span
-                    style={{
-                      textDecoration: "none",
-                      display: "block",
-                      marginBottom: 10,
-                      marginTop: 20,
-                    }}
-                  >
-                    <Status20Filled /> <strong>Status</strong>
-                  </span>
-                  <Select
-                    disabled={templateObject.isDeleted}
-                    value={templateObject.status}
-                    appearance="filled-darker"
-                    name="status"
-                  >
-                    <option value="Draft">Draft</option>
-                    <option value="Released">Released</option>
-                    <option value="Closed">Closed</option>
-                  </Select>
-                  {templateObject.Updated_by != undefined && (
-                    <>
-                      <span
-                        style={{
-                          textDecoration: "none",
-                          display: "block",
-                          marginBottom: 10,
-                          marginTop: 20,
-                        }}
-                      >
-                        <PeopleIcon /> <strong>Updated by</strong>
-                      </span>
-                      <span style={{ display: "block", marginLeft: "20px" }}>
-                        {templateObject.Updated_by["NAME"]}
-                      </span>
-                      <span
-                        style={{
-                          textDecoration: "none",
-                          display: "block",
-                          marginBottom: 10,
-                          marginTop: 20,
-                        }}
-                      >
-                        <Calendar20Regular /> <strong>Updated on</strong>
-                      </span>
-                      <span style={{ display: "block", marginLeft: "20px" }}>
-                        {new Date(
-                          templateObject.UPDATED_ON
-                            ? templateObject.UPDATED_ON
-                            : "",
-                        ).toString()}
-                      </span>
-                    </>
-                  )}
 
-                  <Field style={{ maxWidth: 400, marginTop: 20 }}>
-                    <span
-                      style={{
-                        textDecoration: "none",
-                        display: "block",
-                        marginBottom: 10,
-                      }}
-                    >
-                      <TagIcon size={16} /> <strong>Tags</strong>
-                    </span>
-                    {selectcount % 2 == 0 ? (
-                      <TagPicker
-                        disabled={templateObject.isDeleted}
-                        size="medium"
-                        appearance="filled-darker"
-                        onOptionSelect={onTagSelect}
-                        selectedOptions={templateObject["Tag"]}
-                      >
-                        <TagPickerControl>
-                          <TagPickerGroup>
-                            {templateObject.Tag?.map(
-                              (option: any, tagIdx: number) => (
-                                <Tag
-                                  disabled={templateObject.isDeleted}
-                                  key={`tag-${option.NAME}-${tagIdx}`}
-                                  shape="rounded"
-                                  media={
-                                    <Avatar
-                                      aria-hidden
-                                      name={option.NAME}
-                                      color="colorful"
-                                    />
-                                  }
-                                  value={option}
-                                >
-                                  {option.NAME}
-                                </Tag>
-                              ),
-                            )}
-                          </TagPickerGroup>
-                          <TagPickerInput aria-label="Select Employees" />
-                        </TagPickerControl>
-                        <TagPickerList>
-                          {tags.length > 0
-                            ? tags.map((option: any, tagIdx: number) => (
-                                <TagPickerOption
-                                  media={
-                                    <Avatar
-                                      shape="square"
-                                      aria-hidden
-                                      name={option.NAME}
-                                      color="colorful"
-                                    />
-                                  }
-                                  value={option}
-                                  key={`tagopt-${option.NAME}-${tagIdx}`}
-                                >
-                                  {option.NAME}
-                                </TagPickerOption>
-                              ))
-                            : "No options available"}
-                        </TagPickerList>
-                      </TagPicker>
-                    ) : (
-                      <TagPicker
-                        disabled={templateObject.isDeleted}
-                        size="medium"
-                        appearance="filled-darker"
-                        onOptionSelect={onTagSelect}
-                        selectedOptions={templateObject["Tag"]}
-                      >
-                        <TagPickerControl>
-                          <TagPickerGroup>
-                            {templateObject.Tag?.map(
-                              (option: any, tagIdx: number) => (
-                                <Tag
-                                  disabled={templateObject.isDeleted}
-                                  key={`tag-${option.NAME}-${tagIdx}`}
-                                  shape="rounded"
-                                  media={
-                                    <Avatar
-                                      aria-hidden
-                                      name={option.NAME}
-                                      color="colorful"
-                                    />
-                                  }
-                                  value={option}
-                                >
-                                  {option.NAME}
-                                </Tag>
-                              ),
-                            )}
-                          </TagPickerGroup>
-                          <TagPickerInput aria-label="Select Employees" />
-                        </TagPickerControl>
-                        <TagPickerList>
-                          {tags.length > 0
-                            ? tags.map((option: any, tagIdx: number) => (
-                                <TagPickerOption
-                                  media={
-                                    <Avatar
-                                      shape="square"
-                                      aria-hidden
-                                      name={option.NAME}
-                                      color="colorful"
-                                    />
-                                  }
-                                  value={option}
-                                  key={`tagopt-${option.NAME}-${tagIdx}`}
-                                >
-                                  {option.NAME}
-                                </TagPickerOption>
-                              ))
-                            : "No options available"}
-                        </TagPickerList>
-                      </TagPicker>
-                    )}
-                  </Field>
-                </div>
-              </div>
+            <div className={styles.sidebar}>
+              <StatusField />
+              <MetaInfo />
+              <TagField />
             </div>
           </div>
         </>
       )}
-
-      {/* Palette groups in TemplateFlow replace the old selection dialogs */}
-      {/* <SelectRequirement
-        open={open}
-        setOpen={setOpen}
-        updateTemplate={update_tempalte}
-        selectedRequirementObject={selectedRequirementObject}
-        setSelectedRequirementObject={setSelectedRequirementObject}
-        requirementObjectlist={requirementObjectlist}
-        loadWhileRendering={loadwhileerender}
-      /> */}
-
-      {/* open={open} */}
-      <Dialog
-        open={false}
-        fullWidth={true}
-        maxWidth="sm"
-        onClose={() => setOpen(false)}
-        aria-labelledby="alert-dialog-title"
-        aria-describedby="alert-dialog-description"
-      >
-        <DialogTitle id="alert-dialog-title"></DialogTitle>
-        <DialogContent>
-          <DialogContentText id="alert-dialog-description">
-            <Autocomplete
-              style={{ zIndex: 1 }}
-              multiple
-              size="small"
-              options={requirementObjectlist}
-              getOptionLabel={(option: any) =>
-                option.hasInput
-                  ? `${option.header} - (Object) `
-                  : `${option.header} - (Template)`
-              }
-              defaultValue={selectedRequirementObject["children"]}
-              renderInput={(params) => (
-                <TextField {...params} label={"Requirements Object"} />
-              )}
-              onChange={(event: any, value: any) => (
-                (selectedRequirementObject.children = []),
-                (selectedRequirementObject.children = value),
-                setSelectedRequirementObject(selectedRequirementObject),
-                console.log(selectedRequirementObject)
-              )}
-            />
-          </DialogContentText>
-        </DialogContent>
-        <DialogActions>
-          <div
-            style={{
-              display: "flex",
-              justifyContent: "flex-end",
-              gap: "10px",
-            }}
-          >
-            <Button appearance="secondary" onClick={() => setOpen(false)}>
-              Cancel
-            </Button>
-            <Button
-              appearance="secondary"
-              disabled={loadwhileerender}
-              onClick={() => update_tempalte()}
-            >
-              {loadwhileerender ? <Spinner size="small" /> : "Update"}
-            </Button>
-          </div>
-        </DialogActions>
-      </Dialog>
     </div>
   );
 };
